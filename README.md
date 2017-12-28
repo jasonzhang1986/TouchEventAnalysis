@@ -1,2 +1,4 @@
-# TouchEventAnalysis
-分析和跟踪 Android 的 touchEvent 事件传递和拦截机制
+## TouchEventAnalysis
+本次的目的是通过跟踪一组用户的 Touch 事件，整个事件会经历物理产生、硬件层检测、驱动层处理、Framework 层分发， 应用层处理几个部分。
+1. 事件的物理产生比较容易理解，就是我们的手指在屏幕上做出按压、拖动、抬起的动作，从而生成的 DOWN、 MOVE 、UP 的事件序列
+2. 硬件层检测涉及到几个概念： 电容屏、 电容器、 ITO、鬼点
