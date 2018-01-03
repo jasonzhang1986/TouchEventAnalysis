@@ -13,6 +13,7 @@
         />
 
     <me.jifengzhang.toucheventanalysis.MyViewGroup
+        android:id="@+id/myviewgroup"
         android:layout_width="match_parent"
         android:layout_height="300dp"
         android:background="@color/colorPrimary"
