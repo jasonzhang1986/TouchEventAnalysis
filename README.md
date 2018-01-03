@@ -14,13 +14,13 @@
 
 
 #### Touch 事件传递
-1. MyViewGroup 继承 LinearLayout 默认情况下 onInterceptTouchEvent 返回 false，表示 ViewGroup 不拦截 Touch 事件，交还给 Activity ，从 log 看， Activity 默认也没有处理，直接交给 super 
+1. MyViewGroup 继承 LinearLayout 默认情况下 onInterceptTouchEvent 返回 false，表示 ViewGroup 不拦截 Touch 事件，交还给 Activity ，从 log 看， Activity 默认也没有处理，直接交给 super
 ```java
-01-03 22:20:11.759 4637-4637/me.jifengzhang.toucheventanalysis I/MyViewGroup: onInterceptTouchEvent action = Down, ret = false
-01-03 22:20:11.759 4637-4637/me.jifengzhang.toucheventanalysis I/MyViewGroup: onTouchEvent action = Down, ret = false
-01-03 22:20:11.759 4637-4637/me.jifengzhang.toucheventanalysis I/MyViewGroup: dispatchTouchEvent action = Down, ret = false
-01-03 22:20:11.760 4637-4637/me.jifengzhang.toucheventanalysis I/MainActivity: onTouchEvent action = Down, ret = false
-01-03 22:20:11.760 4637-4637/me.jifengzhang.toucheventanalysis I/MainActivity: dispatchTouchEvent action = Down, ret = false
-01-03 22:20:11.764 4637-4637/me.jifengzhang.toucheventanalysis I/MainActivity: onTouchEvent action = Up, ret = false
-01-03 22:20:11.764 4637-4637/me.jifengzhang.toucheventanalysis I/MainActivity: dispatchTouchEvent action = Up, ret = false
+I/MyViewGroup: onInterceptTouchEvent action = Down, ret = false
+I/MyViewGroup: onTouchEvent action = Down, ret = false
+I/MyViewGroup: dispatchTouchEvent action = Down, ret = false
+I/MainActivity: onTouchEvent action = Down, ret = false
+I/MainActivity: dispatchTouchEvent action = Down, ret = false
+I/MainActivity: onTouchEvent action = Up, ret = false
+I/MainActivity: dispatchTouchEvent action = Up, ret = false
 ```
