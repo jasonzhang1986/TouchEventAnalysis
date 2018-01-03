@@ -25,19 +25,22 @@ public class MyViewGroup extends LinearLayout {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        Log.i("MyViewGroup" , "dispatchTouchEvent action = " + Utils.getToutchEventAction(ev));
-        return super.dispatchTouchEvent(ev);
+        boolean ret = super.dispatchTouchEvent(ev);
+        Log.i("MyViewGroup" , Utils.formatString("dispatchTouchEvent action = %s, ret = %s" ,Utils.getToutchEventAction(ev), ret));
+        return ret;
     }
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
-        Log.i("MyViewGroup", "onInterceptTouchEvent action = " + Utils.getToutchEventAction(ev));
-        return super.onInterceptTouchEvent(ev);
+        boolean ret = super.onInterceptTouchEvent(ev);
+        Log.i("MyViewGroup", Utils.formatString("onInterceptTouchEvent action = %s, ret = %s" , Utils.getToutchEventAction(ev), ret));
+        return ret;
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        Log.i("MyViewGroup", "onTouchEvent action = " + Utils.getToutchEventAction(event));
-        return super.onTouchEvent(event);
+        boolean ret = super.onTouchEvent(event);
+        Log.i("MyViewGroup", Utils.formatString("onTouchEvent action = %s, ret = %s" , Utils.getToutchEventAction(event), ret));
+        return ret;
     }
 }

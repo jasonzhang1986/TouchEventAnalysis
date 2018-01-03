@@ -15,13 +15,15 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        Log.i("MainActivity", "dispatchTouchEvent action = " + Utils.getToutchEventAction(ev));
-        return super.dispatchTouchEvent(ev);
+        boolean ret = super.dispatchTouchEvent(ev);
+        Log.i("MainActivity", Utils.formatString("dispatchTouchEvent action = %s, ret = %s" , Utils.getToutchEventAction(ev), ret));
+        return ret;
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        Log.i("MainActivity", "onTouchEvent action = " + Utils.getToutchEventAction(event));
-        return super.onTouchEvent(event);
+        boolean ret = super.onTouchEvent(event);
+        Log.i("MainActivity", Utils.formatString("onTouchEvent action = %s, ret = %s" , Utils.getToutchEventAction(event), ret));
+        return ret;
     }
 }

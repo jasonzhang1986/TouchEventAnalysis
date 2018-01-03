@@ -21,4 +21,8 @@ public class Utils {
                 return "None";
         }
     }
+
+    public static String formatString(String text, Object... args) {
+        return String.format(text, args);
+    }
 }
