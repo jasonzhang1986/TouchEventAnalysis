@@ -18,5 +18,12 @@
         android:layout_height="300dp"
         android:background="@color/colorPrimary"
         android:layout_alignParentBottom="true"
-        />
+        >
+        <me.jifengzhang.toucheventanalysis.MyView
+            android:id="@+id/btn"
+            android:layout_width="80dp"
+            android:layout_height="40dp"
+            android:text="click"
+            />
+    </me.jifengzhang.toucheventanalysis.MyViewGroup>
 </RelativeLayout>

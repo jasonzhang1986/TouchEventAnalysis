@@ -14,13 +14,30 @@
 
 
 #### Touch 事件传递
-1. MyViewGroup 继承 LinearLayout 默认情况下 onInterceptTouchEvent 返回 false，表示 ViewGroup 不拦截 Touch 事件，交还给 Activity ，从 log 看， Activity 默认也没有处理，直接交给 super
+1. 我们先来看一个最简单的例子，Activity 中只有一个 LinearLayout，Layout 中有一个 Button， 此时给 Button setOnClickListenr 和 setOnTouchListener, 我们来看执行结果
 ```java
-I/MyViewGroup: onInterceptTouchEvent action = Down, ret = false
-I/MyViewGroup: onTouchEvent action = Down, ret = false
-I/MyViewGroup: dispatchTouchEvent action = Down, ret = false
-I/MainActivity: onTouchEvent action = Down, ret = false
-I/MainActivity: dispatchTouchEvent action = Down, ret = false
-I/MainActivity: onTouchEvent action = Up, ret = false
-I/MainActivity: dispatchTouchEvent action = Up, ret = false
+I/Activity: dispatchTouchEvent action = Down
+I/LinearLayout: dispatchTouchEvent action = Down
+I/LinearLayout: onInterceptTouchEvent action = Down
+I/LinearLayout: onInterceptTouchEvent action = Down, ret = false
+I/Button: dispatchTouchEvent action = Down
+I/Activity: btn onTouch action = Down
+I/Button: onTouchEvent action = Down
+I/Button: onTouchEvent action = Down  ret = true
+I/Button: dispatchTouchEvent action = Down  ret = true
+I/LinearLayout: dispatchTouchEvent action = Down, ret = true
+I/Activity: dispatchTouchEvent action = Down ret = true
+I/Activity: dispatchTouchEvent action = Up
+I/LinearLayout: dispatchTouchEvent action = Up
+I/LinearLayout: onInterceptTouchEvent action = Up
+I/LinearLayout: onInterceptTouchEvent action = Up, ret = false
+I/Button: dispatchTouchEvent action = Up
+I/Activity: btn onTouch action = Up
+I/Button: onTouchEvent action = Up
+I/Button: onTouchEvent action = Up  ret = true
+I/Button: dispatchTouchEvent action = Up  ret = true
+I/LinearLayout: dispatchTouchEvent action = Up, ret = true
+I/Activity: dispatchTouchEvent action = Up ret = true
+I/Button: performClick
+I/Activity: btn onClick
 ```
