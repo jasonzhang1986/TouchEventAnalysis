@@ -4,30 +4,43 @@ import android.app.Activity
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
+import android.widget.Button
 
+
+/**
+ * Created by jifengzhang on 18/1/6.
+ */
 class MainActivity : Activity() {
-
-    internal var myViewGroup: MyViewGroup? = null
+    private val TAG:String = "Activity"
+    private var btn: Button? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        myViewGroup = findViewById(R.id.myviewgroup)
-//        myViewGroup!!.setOnTouchListener { _, ev ->
-//            Log.i("MainActivity", String.format("MyViewGroup onTouchListener action = %s, ret = true", Utils.getToutchEventAction(ev)))
-//            true
-//        }
+        btn = findViewById(R.id.btn1)
+        initData()
     }
 
-    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        val ret = super.dispatchTouchEvent(ev)
-        Log.i("MainActivity", String.format("dispatchTouchEvent [%d] action = %s, ret = %s", ev.hashCode(), Utils.getToutchEventAction(ev), ret))
+    fun initData() {
+        btn!!.setOnClickListener{ _ -> Log.i(TAG, "btn onClick") }
+        btn!!.setOnTouchListener{ _, ev ->
+            Log.i(TAG, "btn onTouch action = " + Utils.getToutchEventAction(ev))
+            false
+        }
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        Log.i(TAG,"dispatchTouchEvent action = " + Utils.getToutchEventAction(ev))
+        val ret: Boolean = super.dispatchTouchEvent(ev)
+        Log.i(TAG, "dispatchTouchEvent action = " + Utils.getToutchEventAction(ev) + " ret = " + ret)
         return ret
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        val ret = super.onTouchEvent(event)
-        Log.i("MainActivity", String.format("onTouchEvent [%d] action = %s, ret = %s", event.hashCode(), Utils.getToutchEventAction(event), ret))
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        Log.i(TAG, "onTouchEvent action = " + Utils.getToutchEventAction(event))
+        val ret:Boolean = super.onTouchEvent(event)
+        Log.i(TAG, "onTouchEvent action = " + Utils.getToutchEventAction(event) + " ret = " + ret)
         return ret
     }
+
 }
