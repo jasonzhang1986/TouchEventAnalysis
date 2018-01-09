@@ -14,7 +14,15 @@
 
 
 #### Touch 事件传递
-1. 我们先来看一个最简单的例子，Activity 中只有一个 LinearLayout，Layout 中有一个 Button， 此时给 Button setOnClickListenr 和 setOnTouchListener, 我们来看执行结果
+我们来梳理下 Touch 事件传递涉及的一些基础：
+1. 一般情况下，每一个 Touch 事件，总是以 ACTION_DOWN 事件开始，中间穿插着一些 ACTION_MOVE 事件（取决于是否有手势的移动），然后以 ACTION_UP 事件结束，中间还会有 onTouch、onClick、LongClick 等事件。
+2. 事件分发过程中，包括对 MotionEvent 事件的三种处理操作：
+  * 分发操作：dispatchTouchEvent方法，后面两个方法都是在该方法中被调用的
+  * 拦截操作：onInterceptTouchEvent 方法（ViewGroup）
+  * 消费操作：onTouchEvent 方法和 OnTouchListener 的 onTouch 方法，其中 onTouch 的优先级高于 onTouchEvent，若 onTouch 返回 true，那么就不会调用 onTouchEvent 方法
+3. dispatchTouchEvent 分发 Touch 事件是自顶向下，而 onTouchEvent 消费事件时自底向上，onTouchEvent 和 onIntercepteTouchEvent 都是在 dispatchTouchEvent 中被调用的。
+
+接下来看一个最简单的例子，Activity 中只有一个 LinearLayout，Layout 中有一个 Button， 此时给 Button setOnClickListenr 和 setOnTouchListener, 我们来看执行结果
 ```java
 I/Activity: dispatchTouchEvent action = Down
 I/LinearLayout: dispatchTouchEvent action = Down
@@ -41,3 +49,41 @@ I/Activity: dispatchTouchEvent action = Up ret = true
 I/Button: performClick
 I/Activity: btn onClick
 ```
+每个 Activity 有个 Window 对象(指的就是 PhoneWindow)，PhoneWindow 中有个 DecorView，这个 DecorView 就是 Activity 的 RootView，所有在 Activity 上触发的 TouchEvent，会先派发给 DecorView 的 dispatchTouchEvent，然后由 DecorView 来决定是否往子 view 派发事件。
+```java
+@Override
+public boolean dispatchTouchEvent(MotionEvent ev) {
+    final Window.Callback cb = mWindow.getCallback();
+    return cb != null && !mWindow.isDestroyed() && mFeatureId < 0
+            ? cb.dispatchTouchEvent(ev) : super.dispatchTouchEvent(ev);
+}
+```
+这里的 cb 就是当前的 Activity，回看 Activity 的源码可以看到它实现了 Window.Callback 接口，同时在 Activity 的 attach 方法中，创建 PhoneWindow 后，调用了 mWindow.setCallback(this) 将 PhoneWindow 中的 callback 设置为当前的 Activity，所有这里的 cb.dispatchTouchEvent 就是 Activity 的 dispatchTouchEvent 方法，如果这三个条件成立则调用 Activity 的 dispatchTouchEvent 方法进行事件的分发，否则直接调用 super.dispatchTouchEvent 方法，也就是 FrameLayout 的 dispatchTouchEvent。这里如果继续跟下去，会发现即使调用 Activity 的 dispatchTouchEvent 最终也会d调用到 super.dispatchTouchEvent。
+
+我们继续往下看 Activity 的 dispatchTouchEvent 方法：
+```java
+public boolean dispatchTouchEvent(MotionEvent ev) {
+    if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+        onUserInteraction();
+    }
+    if (getWindow().superDispatchTouchEvent(ev)) {
+        return true;
+    }
+    return onTouchEvent(ev);
+}
+```
+第一个 if 分支我们暂时先不用看，接下来会调用 PhoneWindow 的 superDispatchTouchEvent，跟进去看看：
+```java
+@Override
+public boolean superDispatchTouchEvent(MotionEvent event) {
+    return mDecor.superDispatchTouchEvent(event);
+}
+```
+调用的是 DecorView 的 superDispatchTouchEvent 方法，再跟进去：
+```java
+public boolean superDispatchTouchEvent(MotionEvent event) {
+    return super.dispatchTouchEvent(event);
+}
+```
+这里发现，最终还是调用 DecorView 的 super.dispatchTouchEvent。也就是说，无论怎样 DecorView 的 dispatchTouchEvent 最终都会调用到自己父类 FrameLayout 的 dispatchTouchEvent 方法，而我们在 FrameLayout 中找不到 dispatchTouchEvent 方法，所以会去执行其父类 ViewGroup 的
+ dispatchTouchEvent 方法。如果该 dispatchTouchEvent 返回 true，说明后面有 view 消费掉了该事件，那就返回 true，不会再去执行自身的 onTouchEvent 方法，否则，说明没有 view 消费掉该事件，会一路回传到 Activity 中，然后调用自己的 onTouchEvent 方法，该方法的实现比较简单，如下：
