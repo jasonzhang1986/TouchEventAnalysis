@@ -151,13 +151,7 @@ public boolean dispatchTouchEvent(MotionEvent ev) {
          //不取消事件，同时不拦截事件, 并且是Down事件才进入该区域
         if (!canceled && !intercepted) {
 
-            // If the event is targeting accessiiblity focus we give it to the
-            // view that has accessibility focus and if it does not handle it
-            // we clear the flag and dispatch the event to all children as usual.
-            // We are looking up the accessibility focused host to avoid keeping
-            // state since these events are very rare.
-            View childWithAccessibilityFocus = ev.isTargetAccessibilityFocus()
-                    ? findChildWithAccessibilityFocus() : null;
+            ....
 
             if (actionMasked == MotionEvent.ACTION_DOWN
                     || (split && actionMasked == MotionEvent.ACTION_POINTER_DOWN)
@@ -186,18 +180,8 @@ public boolean dispatchTouchEvent(MotionEvent ev) {
                         final View child = getAndVerifyPreorderedView(
                                 preorderedList, children, childIndex);
 
-                        // If there is a view that has accessibility focus we want it
-                        // to get the event first and if not handled we will perform a
-                        // normal dispatch. We may do a double iteration but this is
-                        // safer given the timeframe.
-                        if (childWithAccessibilityFocus != null) {
-                            if (childWithAccessibilityFocus != child) {
-                                continue;
-                            }
-                            childWithAccessibilityFocus = null;
-                            i = childrenCount - 1;
-                        }
-
+                        ....
+                        //如果view不可见，或者触摸的坐标点不在view的范围内，则跳过本次循环
                         if (!canViewReceivePointerEvents(child)
                                 || !isTransformedTouchPointInView(x, y, child, null)) {
                             ev.setTargetAccessibilityFocus(false);
@@ -213,6 +197,7 @@ public boolean dispatchTouchEvent(MotionEvent ev) {
                         }
 
                         resetCancelNextUpFlag(child);
+                        //把事件分发给子View或ViewGroup, 核心方法
                         if (dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
                             // Child wants to receive touch within its bounds.
                             mLastTouchDownTime = ev.getDownTime();
@@ -229,6 +214,7 @@ public boolean dispatchTouchEvent(MotionEvent ev) {
                             }
                             mLastTouchDownX = ev.getX();
                             mLastTouchDownY = ev.getY();
+                            //添加 TouchTarget，自此mFirstTouchTarget！=null
                             newTouchTarget = addTouchTarget(child, idBitsToAssign);
                             alreadyDispatchedToNewTouchTarget = true;
                             break;
@@ -254,13 +240,18 @@ public boolean dispatchTouchEvent(MotionEvent ev) {
         }
 
         // Dispatch to touch targets.
+        // mFirstTouchTarget赋值是在通过addTouchTarget方法获取的；
+        // 只有处理ACTION_DOWN事件，才会进入addTouchTarget方法。
+        // 这也正是当View没有消费ACTION_DOWN事件，则不会接收其他MOVE,UP等事件的原因
         if (mFirstTouchTarget == null) {
             // No touch targets so treat this as an ordinary view.
+            //没有触摸target,则由当前ViewGroup来处理
             handled = dispatchTransformedTouchEvent(ev, canceled, null,
                     TouchTarget.ALL_POINTER_IDS);
         } else {
             // Dispatch to touch targets, excluding the new touch target if we already
             // dispatched to it.  Cancel touch targets if necessary.
+            //如果View消费ACTION_DOWN事件，那么MOVE,UP等事件相继开始执行
             TouchTarget predecessor = null;
             TouchTarget target = mFirstTouchTarget;
             while (target != null) {
