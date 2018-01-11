@@ -301,3 +301,243 @@ public boolean dispatchTouchEvent(MotionEvent ev) {
 }
 
 ```
+上面提到一个关键的方法 dispatchTransformedTouchEvent ，我们一起来看一下具体都做了什么操作：
+```java
+private boolean dispatchTransformedTouchEvent(MotionEvent event, boolean cancel, View child, int desiredPointerIdBits) {
+    final boolean handled;
+
+    // 发生取消操作时，不再执行后续的任何操作
+    final int oldAction = event.getAction();
+    if (cancel || oldAction == MotionEvent.ACTION_CANCEL) {
+        event.setAction(MotionEvent.ACTION_CANCEL);
+        if (child == null) {
+            handled = super.dispatchTouchEvent(event);
+        } else {
+            handled = child.dispatchTouchEvent(event);
+        }
+        event.setAction(oldAction);
+        return handled;
+    }
+
+    final int oldPointerIdBits = event.getPointerIdBits();
+    final int newPointerIdBits = oldPointerIdBits & desiredPointerIdBits;
+
+    //由于某些原因，发生不一致的操作，那么将抛弃该事件
+    if (newPointerIdBits == 0) {
+        return false;
+    }
+
+    //分发的主要区域
+    final MotionEvent transformedEvent;
+    //判断预期的pointer id与事件的pointer id是否相等
+    if (newPointerIdBits == oldPointerIdBits) {
+        if (child == null || child.hasIdentityMatrix()) {
+            if (child == null) {
+                //不存在子视图时，ViewGroup调用View.dispatchTouchEvent分发事件，再调用ViewGroup.onTouchEvent来处理事件
+                handled = super.dispatchTouchEvent(event);  // [见小节2.4]
+            } else {
+                final float offsetX = mScrollX - child.mLeft;
+                final float offsetY = mScrollY - child.mTop;
+                event.offsetLocation(offsetX, offsetY);
+                //将触摸事件分发给子ViewGroup或View;
+                //如果是ViewGroup，则调用代码(2.1)；
+                //如果是View，则调用代码(3.1)；
+                handled = child.dispatchTouchEvent(event);
+
+                event.offsetLocation(-offsetX, -offsetY); //调整该事件的位置
+            }
+            return handled;
+        }
+        transformedEvent = MotionEvent.obtain(event); //拷贝该事件，来创建一个新的MotionEvent
+    } else {
+        //分离事件，获取包含newPointerIdBits的MotionEvent
+        transformedEvent = event.split(newPointerIdBits);
+    }
+
+    if (child == null) {
+        //不存在子视图时，ViewGroup调用View.dispatchTouchEvent分发事件，再调用ViewGroup.onTouchEvent来处理事件
+        handled = super.dispatchTouchEvent(transformedEvent);  // [见小节2.4]
+    } else {
+        final float offsetX = mScrollX - child.mLeft;
+        final float offsetY = mScrollY - child.mTop;
+        transformedEvent.offsetLocation(offsetX, offsetY);
+        if (! child.hasIdentityMatrix()) {
+            //将该视图的矩阵进行转换
+            transformedEvent.transform(child.getInverseMatrix());
+        }
+        //将触摸事件分发给子ViewGroup或View;
+        /如果是ViewGroup，则 [见小节2.4]; 如果是View，则[见小节2.5];
+        handled = child.dispatchTouchEvent(transformedEvent);
+    }
+
+    //回收transformedEvent
+    transformedEvent.recycle();
+    return handled;
+}
+```
+可以看到该方法是 ViewGroup 真正处理事件的地方，分发子 View 来处理事件，过滤掉不相干的 pointer ids。当子视图为 null 时，MotionEvent 将会发送给该 ViewGroup。最终调用 View.dispatchTouchEvent 方法来分发事件。
+
+#### View.dispatchTouchEvent
+```java
+public boolean dispatchTouchEvent(MotionEvent event) {
+    ...
+
+    final int actionMasked = event.getActionMasked();
+    if (actionMasked == MotionEvent.ACTION_DOWN) {
+        //在Down事件之前，如果存在滚动操作则停止。不存在则不进行操作
+        stopNestedScroll();
+    }
+
+    // mOnTouchListener.onTouch优先于onTouchEvent。
+    if (onFilterTouchEventForSecurity(event)) {
+        //当存在OnTouchListener，且视图状态为ENABLED时，调用onTouch()方法
+        ListenerInfo li = mListenerInfo;
+        if (li != null && li.mOnTouchListener != null
+                && (mViewFlags & ENABLED_MASK) == ENABLED
+                && li.mOnTouchListener.onTouch(this, event)) {
+            result = true; //如果已经消费事件，则返回True
+        }
+        //如果OnTouch（)没有消费Touch事件则调用OnTouchEvent()
+        if (!result && onTouchEvent(event)) { // [见小节2.5.1]
+            result = true; //如果已经消费事件，则返回True
+        }
+    }
+
+    if (!result && mInputEventConsistencyVerifier != null) {
+        mInputEventConsistencyVerifier.onUnhandledEvent(event, 0);
+    }
+
+    // 处理取消或抬起操作
+    if (actionMasked == MotionEvent.ACTION_UP ||
+            actionMasked == MotionEvent.ACTION_CANCEL ||
+            (actionMasked == MotionEvent.ACTION_DOWN && !result)) {
+        stopNestedScroll();
+    }
+
+    return result;
+}
+```
+1. 先由OnTouchListener的OnTouch()来处理事件，当返回True，则消费该事件，否则进入2
+2. onTouchEvent处理事件，的那个返回True时，消费该事件。否则不会处理
+
+#### View.onTouchEvent
+```java
+public boolean onTouchEvent(MotionEvent event) {
+    final float x = event.getX();
+    final float y = event.getY();
+    final int viewFlags = mViewFlags;
+
+    // 当View状态为DISABLED，如果可点击或可长按，则返回True，即消费事件
+    if ((viewFlags & ENABLED_MASK) == DISABLED) {
+        if (event.getAction() == MotionEvent.ACTION_UP && (mPrivateFlags & PFLAG_PRESSED) != 0) {
+            setPressed(false);
+        }
+        return (((viewFlags & CLICKABLE) == CLICKABLE ||
+                (viewFlags & LONG_CLICKABLE) == LONG_CLICKABLE));
+    }
+
+    if (mTouchDelegate != null) {
+        if (mTouchDelegate.onTouchEvent(event)) {
+            return true;
+        }
+    }
+
+    //当View状态为ENABLED，如果可点击或可长按，则返回True，即消费事件;
+    //与前面的的结合，可得出结论:只要view是可点击或可长按，则消费该事件.
+    if (((viewFlags & CLICKABLE) == CLICKABLE ||
+            (viewFlags & LONG_CLICKABLE) == LONG_CLICKABLE)) {
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_UP:
+                boolean prepressed = (mPrivateFlags & PFLAG_PREPRESSED) != 0;
+                if ((mPrivateFlags & PFLAG_PRESSED) != 0 || prepressed) {
+                    boolean focusTaken = false;
+                    if (isFocusable() && isFocusableInTouchMode() && !isFocused()) {
+                        focusTaken = requestFocus();
+                    }
+
+                    if (prepressed) {
+                        setPressed(true, x, y);
+                   }
+
+                    if (!mHasPerformedLongPress) {
+                        //这是Tap操作，移除长按回调方法
+                        removeLongPressCallback();
+
+                        if (!focusTaken) {
+                            if (mPerformClick == null) {
+                                mPerformClick = new PerformClick();
+                            }
+                            //调用View.OnClickListener
+                            if (!post(mPerformClick)) {
+                                performClick();
+                            }
+                        }
+                    }
+
+                    if (mUnsetPressedState == null) {
+                        mUnsetPressedState = new UnsetPressedState();
+                    }
+
+                    if (prepressed) {
+                        postDelayed(mUnsetPressedState,
+                                ViewConfiguration.getPressedStateDuration());
+                    } else if (!post(mUnsetPressedState)) {
+                        mUnsetPressedState.run();
+                    }
+
+                    removeTapCallback();
+                }
+                break;
+
+            case MotionEvent.ACTION_DOWN:
+                mHasPerformedLongPress = false;
+
+                if (performButtonActionOnTouchDown(event)) {
+                    break;
+                }
+
+                //获取是否处于可滚动的视图内
+                boolean isInScrollingContainer = isInScrollingContainer();
+
+                if (isInScrollingContainer) {
+                    mPrivateFlags |= PFLAG_PREPRESSED;
+                    if (mPendingCheckForTap == null) {
+                        mPendingCheckForTap = new CheckForTap();
+                    }
+                    mPendingCheckForTap.x = event.getX();
+                    mPendingCheckForTap.y = event.getY();
+                    //当处于可滚动视图内，则延迟TAP_TIMEOUT，再反馈按压状态，用来判断用户是否想要滚动。默认延时为100ms
+                    postDelayed(mPendingCheckForTap, ViewConfiguration.getTapTimeout());
+                } else {
+                    //当不再滚动视图内，则立刻反馈按压状态
+                    setPressed(true, x, y);
+                    checkForLongClick(0); //检测是否是长按
+                }
+                break;
+
+            case MotionEvent.ACTION_CANCEL:
+                setPressed(false);
+                removeTapCallback();
+                removeLongPressCallback();
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+                drawableHotspotChanged(x, y);
+
+                if (!pointInView(x, y, mTouchSlop)) {
+                    removeTapCallback();
+                    if ((mPrivateFlags & PFLAG_PRESSED) != 0) {
+                        removeLongPressCallback();
+                        setPressed(false);
+                    }
+                }
+                break;
+        }
+
+        return true;
+    }
+    return false;
+}
+```
+事件分发的大致流程：
+![流程图](image/touchevent.jpg)
