@@ -17,12 +17,8 @@ I/LinearLayout: onInterceptTouchEvent action = Down
 I/LinearLayout: onInterceptTouchEvent action = Down, ret = false
 I/Button: dispatchTouchEvent action = Down
 
-I/View: Touch down dispatch to me.jifengzhang.toucheventanalysis.MyView
-{cb5bc3c VFED..C.. ........ 0,0-100,48 #7f030000 app:id/btn1},
-event = MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=60.7241, y[0]=24.680717,
-  toolType[0]=TOOL_TYPE_FINGER,buttonState=0, metaState=0, flags=0x2, edgeFlags=0x0,
-  pointerCount=1, historySize=0, eventTime=3910275, downTime=3910275,
-  deviceId=3, source=0x1002 }
+I/View: Touch down dispatch to me.jifengzhang.toucheventanalysis.MyView{cb5bc3c VFED..C.. ........ 0,0-100,48 #7f030000 app:id/btn1},event = MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=60.7241, y[0]=24.680717,toolType[0]=TOOL_TYPE_FINGER,buttonState=0, metaState=0, flags=0x2, edgeFlags=0x0,pointerCount=1,historySize=0, eventTime=3910275, downTime=3910275,deviceId=3, source=0x1002 }
+
 I/Button: onTouchEvent action = Down
 I/Button: onTouchEvent action = Down  ret = true
 I/Button: dispatchTouchEvent action = Down  ret = true
@@ -43,9 +39,9 @@ I/LinearLayout: dispatchTouchEvent action = Up
 I/LinearLayout: onInterceptTouchEvent action = Up
 I/LinearLayout: onInterceptTouchEvent action = Up, ret = false
 I/Button: dispatchTouchEvent action = Up
-I/View: Touch up dispatch to me.jifengzhang.toucheventanalysis.MyView{cb5bc3c VFED..C.. ...P.... 0,0-100,48 #7f030000 app:id/btn1},
-event = MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=60.7241, y[0]=24.680717, toolType[0]=TOOL_TYPE_FINGER,
-buttonState=0, metaState=0, flags=0x2, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=3910351, downTime=3910275, deviceId=3, source=0x1002 }
+
+I/View: Touch up dispatch to me.jifengzhang.toucheventanalysis.MyView{cb5bc3c VFED..C.. ...P.... 0,0-100,48 #7f030000 app:id/btn1},event = MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=60.7241, y[0]=24.680717,toolType[0]=TOOL_TYPE_FINGER,buttonState=0, metaState=0, flags=0x2, edgeFlags=0x0, pointerCount=1,historySize=0, eventTime=3910351, downTime=3910275, deviceId=3, source=0x1002 }
+
 I/Button: onTouchEvent action = Up
 I/Button: onTouchEvent action = Up  ret = true
 I/Button: dispatchTouchEvent action = Up  ret = true
