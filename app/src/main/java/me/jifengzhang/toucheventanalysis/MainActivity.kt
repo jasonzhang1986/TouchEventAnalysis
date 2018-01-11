@@ -23,10 +23,10 @@ class MainActivity : Activity() {
 
     fun initData() {
         btn!!.setOnClickListener{ _ -> Log.i(TAG, "btn onClick") }
-        btn!!.setOnTouchListener{ _, ev ->
-            Log.i(TAG, "btn onTouch action = " + Utils.getToutchEventAction(ev))
-            false
-        }
+//        btn!!.setOnTouchListener{ _, ev ->
+//            Log.i(TAG, "btn onTouch action = " + Utils.getToutchEventAction(ev))
+//            false
+//        }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
