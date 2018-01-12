@@ -3,10 +3,24 @@
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <me.jifengzhang.toucheventanalysis.MyView
-        android:id="@+id/btn1"
-        android:layout_width="100dp"
-        android:layout_height="wrap_content"
-        android:text="click"
-        />
+    <me.jifengzhang.toucheventanalysis.MyViewGroup
+        android:orientation="vertical"
+        android:layout_width="400dp"
+        android:layout_height="400dp"
+        android:background="@android:color/holo_blue_bright">
+
+        <me.jifengzhang.toucheventanalysis.MyView
+            android:id="@+id/btn1"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:text="click"
+            />
+        <me.jifengzhang.toucheventanalysis.MyTextView
+            android:layout_width="100dp"
+            android:layout_height="50dp"
+            android:text="测试测试点击"
+            android:layout_marginTop="50dp"
+            android:layout_marginLeft="50dp"
+            />
+    </me.jifengzhang.toucheventanalysis.MyViewGroup>
 </me.jifengzhang.toucheventanalysis.MyViewGroup>

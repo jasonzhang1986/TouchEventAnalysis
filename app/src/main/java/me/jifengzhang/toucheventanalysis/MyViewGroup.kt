@@ -18,24 +18,28 @@ class MyViewGroup : LinearLayout {
 
     constructor(context: Context, attrs: AttributeSet, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {}
 
+    fun hashcodeStr():String {
+        return "["+hashCode()+"]"
+    }
+
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        Log.i(TAG, "dispatchTouchEvent action = " + Utils.getToutchEventAction(ev))
+        Log.i(TAG, hashcodeStr() + " dispatchTouchEvent action = " + Utils.getToutchEventAction(ev))
         val ret = super.dispatchTouchEvent(ev)
-        Log.i(TAG, Utils.formatString("dispatchTouchEvent action = %s, ret = %s", Utils.getToutchEventAction(ev), ret))
+        Log.i(TAG, Utils.formatString("%s dispatchTouchEvent action = %s, ret = %s", hashcodeStr(), Utils.getToutchEventAction(ev), ret))
         return ret
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
-        Log.i(TAG, "onInterceptTouchEvent action = " + Utils.getToutchEventAction(ev))
+        Log.i(TAG, hashcodeStr() + " onInterceptTouchEvent action = " + Utils.getToutchEventAction(ev))
         val ret = super.onInterceptTouchEvent(ev)
-        Log.i(TAG, Utils.formatString("onInterceptTouchEvent action = %s, ret = %s", Utils.getToutchEventAction(ev), ret))
+        Log.i(TAG, Utils.formatString("%s onInterceptTouchEvent action = %s, ret = %s", hashcodeStr(), Utils.getToutchEventAction(ev), ret))
         return ret
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        Log.i(TAG,"onTouchEvent action = " + Utils.getToutchEventAction(event))
+        Log.i(TAG,hashcodeStr() + " onTouchEvent action = " + Utils.getToutchEventAction(event))
         val ret = super.onTouchEvent(event)
-        Log.i(TAG, Utils.formatString("onTouchEvent action = %s, ret = %s", Utils.getToutchEventAction(event), ret))
+        Log.i(TAG, Utils.formatString("%s onTouchEvent action = %s, ret = %s", hashcodeStr(), Utils.getToutchEventAction(event), ret))
         return ret
     }
 
