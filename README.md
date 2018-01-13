@@ -9,47 +9,8 @@
   * 消费操作：onTouchEvent 方法和 OnTouchListener 的 onTouch 方法，其中 onTouch 的优先级高于 onTouchEvent，若 onTouch 返回 true，那么就不会调用 onTouchEvent 方法
 3. dispatchTouchEvent 分发 Touch 事件是自顶向下，而 onTouchEvent 消费事件时自底向上，onTouchEvent 和 onIntercepteTouchEvent 都是在 dispatchTouchEvent 中被调用的。
 
-接下来看一个最简单的例子，Activity 中只有一个 LinearLayout，Layout 中有一个 Button， 此时给 Button setOnClickListenr 和 setOnTouchListener, 我们来看执行结果
-```java
-I/Activity: dispatchTouchEvent action = Down
-I/LinearLayout: dispatchTouchEvent action = Down
-I/LinearLayout: onInterceptTouchEvent action = Down
-I/LinearLayout: onInterceptTouchEvent action = Down, ret = false
-I/Button: dispatchTouchEvent action = Down
+通过一个简单的例子通过 [log](log.md)来看一下事件传递都经历了哪些步骤
 
-I/View: Touch down dispatch to me.jifengzhang.toucheventanalysis.MyView{cb5bc3c VFED..C.. ........ 0,0-100,48 #7f030000 app:id/btn1},event = MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=60.7241, y[0]=24.680717,toolType[0]=TOOL_TYPE_FINGER,buttonState=0, metaState=0, flags=0x2, edgeFlags=0x0,pointerCount=1,historySize=0, eventTime=3910275, downTime=3910275,deviceId=3, source=0x1002 }
-
-I/Button: onTouchEvent action = Down
-I/Button: onTouchEvent action = Down  ret = true
-I/Button: dispatchTouchEvent action = Down  ret = true
-I/LinearLayout: dispatchTouchEvent action = Down, ret = true
-I/Activity: dispatchTouchEvent action = Down ret = true
-I/Activity: dispatchTouchEvent action = Move
-I/LinearLayout: dispatchTouchEvent action = Move
-I/LinearLayout: onInterceptTouchEvent action = Move
-I/LinearLayout: onInterceptTouchEvent action = Move, ret = false
-I/Button: dispatchTouchEvent action = Move
-I/Button: onTouchEvent action = Move
-I/Button: onTouchEvent action = Move  ret = true
-I/Button: dispatchTouchEvent action = Move  ret = true
-I/LinearLayout: dispatchTouchEvent action = Move, ret = true
-I/Activity: dispatchTouchEvent action = Move ret = true
-I/Activity: dispatchTouchEvent action = Up
-I/LinearLayout: dispatchTouchEvent action = Up
-I/LinearLayout: onInterceptTouchEvent action = Up
-I/LinearLayout: onInterceptTouchEvent action = Up, ret = false
-I/Button: dispatchTouchEvent action = Up
-
-I/View: Touch up dispatch to me.jifengzhang.toucheventanalysis.MyView{cb5bc3c VFED..C.. ...P.... 0,0-100,48 #7f030000 app:id/btn1},event = MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=60.7241, y[0]=24.680717,toolType[0]=TOOL_TYPE_FINGER,buttonState=0, metaState=0, flags=0x2, edgeFlags=0x0, pointerCount=1,historySize=0, eventTime=3910351, downTime=3910275, deviceId=3, source=0x1002 }
-
-I/Button: onTouchEvent action = Up
-I/Button: onTouchEvent action = Up  ret = true
-I/Button: dispatchTouchEvent action = Up  ret = true
-I/LinearLayout: dispatchTouchEvent action = Up, ret = true
-I/Activity: dispatchTouchEvent action = Up ret = true
-I/Button: performClick
-I/Activity: btn onClick
-```
 每个 Activity 有个 Window 对象(指的就是 PhoneWindow)，PhoneWindow 中有个 DecorView，这个 DecorView 就是 Activity 的 RootView，所有在 Activity 上触发的 TouchEvent，会先派发给 DecorView 的 dispatchTouchEvent，然后由 DecorView 来决定是否往子 view 派发事件。
 ```java
 @Override
