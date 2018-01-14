@@ -501,6 +501,6 @@ public boolean onTouchEvent(MotionEvent event) {
 }
 ```
 事件分发的大致流程：
-![流程图](image/touchevent.jpg)
+![流程图](../image/touchevent.jpg)
 
 到这里，我们再回头看一下开篇提到的demo以及记录的 [log](log.md)，对这个流程图进行完善
