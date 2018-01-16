@@ -12,13 +12,15 @@ public class Utils {
         int action = event.getAction();
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-                return "Down";
+                return "Down["+action+"]";
             case MotionEvent.ACTION_MOVE:
-                return "Move";
+                return "Move["+action+"]";
             case MotionEvent.ACTION_UP:
-                return "Up";
+                return "Up["+action+"]";
+            case MotionEvent.ACTION_CANCEL:
+                return "Cancel["+action+"]";
             default:
-                return "None";
+                return "None["+action+"]";
         }
     }
 
