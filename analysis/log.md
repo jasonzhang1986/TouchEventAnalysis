@@ -139,3 +139,17 @@ I/Activity: onTouchEvent action = Up ret = false
 I/Activity: dispatchTouchEvent action = Up ret = false
 ```
 此时再次点击 Button，发现事件并没有传递给 Button，而是到 LinearLayout 之后就直接到了 LinearLayout 的 onTouchEvent，再之后就是沿着来的路返回，直到 Activity 结束
+
+
+** 通过 adb shell 下的 getevent 命令可以看到输入的事件 **
+```
+adb shell
+getevent -l
+```
+此时按 Power 键输出如下图:
+
+![press_key](../image/getevent_key.png)
+
+我们再来试一下 Touch 事件：
+
+![touch_event](../image/getevent_touch.png)
