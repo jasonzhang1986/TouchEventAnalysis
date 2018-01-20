@@ -1,31 +1,21 @@
-## TouchEventAnalysis
+## Activity 到 ViewGroup (View) 的事件传递
 
-#### Touch 事件传递
-我们来梳理下 Touch 事件传递涉及的一些基础：
-1. 一般情况下，每一个 Touch 事件，总是以 ACTION_DOWN 事件开始，中间穿插着一些 ACTION_MOVE 事件（取决于是否有手势的移动），然后以 ACTION_UP 事件结束，中间还会有 onTouch、onClick、LongClick 等事件。
-2. 事件分发过程中，包括对 MotionEvent 事件的三种处理操作：
-  * 分发操作：dispatchTouchEvent方法，后面两个方法都是在该方法中被调用的
-  * 拦截操作：onInterceptTouchEvent 方法（ViewGroup）
-  * 消费操作：onTouchEvent 方法和 OnTouchListener 的 onTouch 方法，其中 onTouch 的优先级高于 onTouchEvent，若 onTouch 返回 true，那么就不会调用 onTouchEvent 方法
-3. dispatchTouchEvent 分发 Touch 事件是自顶向下，而 onTouchEvent 消费事件时自底向上，onTouchEvent 和 onIntercepteTouchEvent 都是在 dispatchTouchEvent 中被调用的。
+>我们来梳理下 Touch 事件传递涉及的一些基础：
+>1. 一般情况下，每一个 Touch 事件，总是以 ACTION_DOWN 事件开始，中间穿插着一些 ACTION_MOVE 事件（取决于手指是否有移动），然后以 ACTION_UP 事件结束，中间还会有 onTouch、onClick、LongClick 等事件。
+>2. 事件分发过程中，包括对 MotionEvent 事件的三种处理操作：
+> * 分发操作：dispatchTouchEvent方法，后面两个方法都是在该方法中被调用的
+>  * 拦截操作：onInterceptTouchEvent 方法（ViewGroup）
+>  * 消费操作：onTouchEvent 方法和 OnTouchListener 的 onTouch 方法，其中 onTouch 的优先级高于 onTouchEvent，若 onTouch 返回 true，那么就不会调用 onTouchEvent 方法
+>3. dispatchTouchEvent 分发 Touch 事件是自顶向下，而 onTouchEvent 消费事件时自底向上，onTouchEvent 和 onIntercepteTouchEvent 都是在 dispatchTouchEvent 中被调用的。
 
-通过一个简单的例子通过 [log](log.md) 来看一下事件传递都经历了哪些步骤
 
 每个 Activity 有个 Window 对象(指的就是 PhoneWindow)，PhoneWindow 中有个 DecorView，这个 DecorView 就是 Activity 的 RootView，所有在 Activity 上触发的 TouchEvent，会先派发给 DecorView 的 dispatchTouchEvent，然后由 DecorView 来决定是否往子 view 派发事件。
-```java
-@Override
-public boolean dispatchTouchEvent(MotionEvent ev) {
-    final Window.Callback cb = mWindow.getCallback();
-    return cb != null && !mWindow.isDestroyed() && mFeatureId < 0
-            ? cb.dispatchTouchEvent(ev) : super.dispatchTouchEvent(ev);
-}
-```
-这里的 cb 就是当前的 Activity，回看 Activity 的源码可以看到它实现了 Window.Callback 接口，同时在 Activity 的 attach 方法中，创建 PhoneWindow 后，调用了 mWindow.setCallback(this) 将 PhoneWindow 中的 callback 设置为当前的 Activity，所有这里的 cb.dispatchTouchEvent 就是 Activity 的 dispatchTouchEvent 方法，如果这三个条件成立则调用 Activity 的 dispatchTouchEvent 方法进行事件的分发，否则直接调用 super.dispatchTouchEvent 方法，也就是 FrameLayout 的 dispatchTouchEvent。这里如果继续跟下去，会发现即使调用 Activity 的 dispatchTouchEvent 最终也会d调用到 super.dispatchTouchEvent。
 
-我们继续往下看 Activity 的 dispatchTouchEvent 方法：
+####Activity.dispatchTouchEvent
 ```java
 public boolean dispatchTouchEvent(MotionEvent ev) {
     if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+      //如果是DOWN事件，通知做一些用户反馈的事情
         onUserInteraction();
     }
     if (getWindow().superDispatchTouchEvent(ev)) {
@@ -34,21 +24,43 @@ public boolean dispatchTouchEvent(MotionEvent ev) {
     return onTouchEvent(ev);
 }
 ```
-第一个 if 分支我们暂时先不用看，接下来会调用 PhoneWindow 的 superDispatchTouchEvent，跟进去看看：
+代码很简单，主要的是调用 PhoneWindow 的 superDispatchTouchEvent
+
+#### PhoneWindow.superDispatchTouchEvent
 ```java
 @Override
 public boolean superDispatchTouchEvent(MotionEvent event) {
     return mDecor.superDispatchTouchEvent(event);
 }
 ```
-调用的是 DecorView 的 superDispatchTouchEvent 方法，再跟进去：
+很清晰的看到是调用 DecorView 的 superDispatchTouchEvent
+
+#### DecorView.superDispatchTouchEvent
 ```java
 public boolean superDispatchTouchEvent(MotionEvent event) {
     return super.dispatchTouchEvent(event);
 }
 ```
-这里发现，最终还是调用 DecorView 的 super.dispatchTouchEvent。也就是说，无论怎样 DecorView 的 dispatchTouchEvent 最终都会调用到自己父类 FrameLayout 的 dispatchTouchEvent 方法，而我们在 FrameLayout 中找不到 dispatchTouchEvent 方法，所以会去执行其父类 ViewGroup 的
- dispatchTouchEvent 方法。如果该 dispatchTouchEvent 返回 true，说明后面有 view 消费掉了该事件，那就返回 true，不会再去执行自身的 onTouchEvent 方法，否则，说明没有 view 消费掉该事件，会一路回传到 Activity 中，然后调用自己的 onTouchEvent 方法，该方法的实现比较简单，如下：
+这里发现，最终是调用 DecorView 的 super.dispatchTouchEvent。DecorView 的父类是 FrameLayout，但在 FrameLayout 中找不到 dispatchTouchEvent 方法，所以会去执行 FrameLayout 父类 ViewGroup 的
+ dispatchTouchEvent 方法。
+
+ 再看一眼 Activity 的 dispatchTouchEvent
+```java
+public boolean dispatchTouchEvent(MotionEvent ev) {
+    ...
+    if (getWindow().superDispatchTouchEvent(ev)) {
+        return true;
+    }
+    return onTouchEvent(ev);
+}
+```
+ 刚刚分析了 window.superDispatchTouchEvent, 有两种结果 **True** 或者 **False**
+
+ + 如果返回 true，说明中途有 view 消费掉了该事件，那 Activity 的 dispatchTouchEvent 也返回 true，说明该事件已经被消费掉了，不会再去执行自身的 onTouchEvent 方法；
+
+ + 反之如果返回 false，说明没有 view 消费掉该事件，会一路回传到 Activity 中，然后调用自己的 onTouchEvent 方法
+
+ #### Activity.onTouchEvent
  ```java
  public boolean onTouchEvent(MotionEvent event) {
     //当窗口需要关闭时，消费掉当前event
@@ -60,7 +72,12 @@ public boolean superDispatchTouchEvent(MotionEvent event) {
     return false;
 }
  ```
-接下来我们重点来分析一下 ViewGroup 的 dispatchTouchEvent
+
+上面我们只是从粗略的了解了 TouchEvent 从 Activity 的分发过程，接下来从 DecorView 的 super.dispatchTouchEvent 往下分析
+
+上文降到 DecorView 的 super.dispatchTouchEvent 最终会调用其父类(FrameLayout)的父类(ViewGroup)的 dispatchTouchEvent
+
+####ViewGroup.dispatchTouchEvent
 ```java
 public boolean dispatchTouchEvent(MotionEvent ev) {
 
@@ -262,7 +279,22 @@ public boolean dispatchTouchEvent(MotionEvent ev) {
 }
 
 ```
-上面提到一个关键的方法 dispatchTransformedTouchEvent ，我们一起来看一下具体都做了什么操作：
+是不是一脸懵逼，是不是有点佩服 Google 的工程师们，其实简单来说 dispatchTouchEvent 主要功能就是判断是否需要拦截，需要拦截执行 onTouchEvent，不需要拦截就把 Event 分发给 child 处理
+
+### onInterceptTouchEvent
+```java
+public boolean onInterceptTouchEvent(MotionEvent ev) {
+    return false;
+}
+```
++ ViewGroup 的默认实现是 return false
++ 当返回 true 时，表示事件被当前 ViewGroup 拦截
++ 当返回 false 时，事件继续往下进行分发
+
+</br>
+核心处理方法是 dispatchTouchEvent 中调用的 dispatchTransformedTouchEvent
+
+#### ViewGroup.dispatchTransformedTouchEvent
 ```java
 private boolean dispatchTransformedTouchEvent(MotionEvent event, boolean cancel, View child, int desiredPointerIdBits) {
     final boolean handled;
@@ -295,14 +327,14 @@ private boolean dispatchTransformedTouchEvent(MotionEvent event, boolean cancel,
         if (child == null || child.hasIdentityMatrix()) {
             if (child == null) {
                 //不存在子视图时，ViewGroup调用View.dispatchTouchEvent分发事件，再调用ViewGroup.onTouchEvent来处理事件
-                handled = super.dispatchTouchEvent(event);  // [见小节2.4]
+                handled = super.dispatchTouchEvent(event);  
             } else {
                 final float offsetX = mScrollX - child.mLeft;
                 final float offsetY = mScrollY - child.mTop;
                 event.offsetLocation(offsetX, offsetY);
                 //将触摸事件分发给子ViewGroup或View;
-                //如果是ViewGroup，则调用代码(2.1)；
-                //如果是View，则调用代码(3.1)；
+                //如果是ViewGroup，则调用 ViewGroup.dispatchTouchEvent；
+                //如果是View，则调用View.dispatchTouchEvent；
                 handled = child.dispatchTouchEvent(event);
 
                 event.offsetLocation(-offsetX, -offsetY); //调整该事件的位置
@@ -317,7 +349,7 @@ private boolean dispatchTransformedTouchEvent(MotionEvent event, boolean cancel,
 
     if (child == null) {
         //不存在子视图时，ViewGroup调用View.dispatchTouchEvent分发事件，再调用ViewGroup.onTouchEvent来处理事件
-        handled = super.dispatchTouchEvent(transformedEvent);  // [见小节2.4]
+        handled = super.dispatchTouchEvent(transformedEvent);  
     } else {
         final float offsetX = mScrollX - child.mLeft;
         final float offsetY = mScrollY - child.mTop;
@@ -327,7 +359,7 @@ private boolean dispatchTransformedTouchEvent(MotionEvent event, boolean cancel,
             transformedEvent.transform(child.getInverseMatrix());
         }
         //将触摸事件分发给子ViewGroup或View;
-        /如果是ViewGroup，则 [见小节2.4]; 如果是View，则[见小节2.5];
+        /如果是ViewGroup，; 如果是View，;
         handled = child.dispatchTouchEvent(transformedEvent);
     }
 
@@ -336,7 +368,7 @@ private boolean dispatchTransformedTouchEvent(MotionEvent event, boolean cancel,
     return handled;
 }
 ```
-可以看到该方法是 ViewGroup 真正处理事件的地方，分发子 View 来处理事件，过滤掉不相干的 pointer ids。当子视图为 null 时，MotionEvent 将会发送给该 ViewGroup。最终调用 View.dispatchTouchEvent 方法来分发事件。
+可以看到该方法是 ViewGroup 真正处理事件的地方，将 Event 分发给 View 来处理，过滤掉不相干的 pointer ids。当一个 ViewGroup 的 childcount == 0 时，MotionEvent 将会被分发给该 ViewGroup 自己处理。最终调用 View.dispatchTouchEvent 方法来分发事件。
 
 #### View.dispatchTouchEvent
 ```java
@@ -359,7 +391,7 @@ public boolean dispatchTouchEvent(MotionEvent event) {
             result = true; //如果已经消费事件，则返回True
         }
         //如果OnTouch（)没有消费Touch事件则调用OnTouchEvent()
-        if (!result && onTouchEvent(event)) { // [见小节2.5.1]
+        if (!result && onTouchEvent(event)) {
             result = true; //如果已经消费事件，则返回True
         }
     }
@@ -378,8 +410,8 @@ public boolean dispatchTouchEvent(MotionEvent event) {
     return result;
 }
 ```
-1. 先由OnTouchListener的OnTouch()来处理事件，当返回True，则消费该事件，否则进入2
-2. onTouchEvent处理事件，的那个返回True时，消费该事件。否则不会处理
+1. 先由 OnTouchListener 的 OnTouch() 来处理事件，如果返回True则该事件被消费了；
+2. 如果 onTouch 返回 False，则由 onTouchEvent 处理事件。
 
 #### View.onTouchEvent
 ```java
@@ -500,7 +532,5 @@ public boolean onTouchEvent(MotionEvent event) {
     return false;
 }
 ```
-事件分发的大致流程：
+到这里我们分析了 TouchEvent 从 Activity 开始到被消费的整个过程，通过下面的流程图来回顾下大致的流程：
 ![流程图](../image/TouchEvent.png)
-
-到这里，我们再回头看一下开篇提到的demo以及记录的 [log](log.md)，对这个流程图进行完善
