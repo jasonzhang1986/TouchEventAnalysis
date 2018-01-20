@@ -1,12 +1,12 @@
-## Activity 到 ViewGroup (View) 的事件传递
+### Activity 到 ViewGroup (View) 的事件传递
 
->我们来梳理下 Touch 事件传递涉及的一些基础：
->1. 一般情况下，每一个 Touch 事件，总是以 ACTION_DOWN 事件开始，中间穿插着一些 ACTION_MOVE 事件（取决于手指是否有移动），然后以 ACTION_UP 事件结束，中间还会有 onTouch、onClick、LongClick 等事件。
->2. 事件分发过程中，包括对 MotionEvent 事件的三种处理操作：
-> * 分发操作：dispatchTouchEvent方法，后面两个方法都是在该方法中被调用的
->  * 拦截操作：onInterceptTouchEvent 方法（ViewGroup）
->  * 消费操作：onTouchEvent 方法和 OnTouchListener 的 onTouch 方法，其中 onTouch 的优先级高于 onTouchEvent，若 onTouch 返回 true，那么就不会调用 onTouchEvent 方法
->3. dispatchTouchEvent 分发 Touch 事件是自顶向下，而 onTouchEvent 消费事件时自底向上，onTouchEvent 和 onIntercepteTouchEvent 都是在 dispatchTouchEvent 中被调用的。
+我们来梳理下 Touch 事件传递涉及的一些基础：
+1. 一般情况下，每一个 Touch 事件，总是以 ACTION_DOWN 事件开始，中间穿插着一些 ACTION_MOVE 事件（取决于手指是否有移动），然后以 ACTION_UP 事件结束，中间还会有 onTouch、onClick、LongClick 等事件。
+2. 事件分发过程中，包括对 MotionEvent 事件的三种处理操作：
+ * 分发操作：dispatchTouchEvent方法，后面两个方法都是在该方法中被调用的
+  * 拦截操作：onInterceptTouchEvent 方法（ViewGroup）
+  * 消费操作：onTouchEvent 方法和 OnTouchListener 的 onTouch 方法，其中 onTouch 的优先级高于 onTouchEvent，若 onTouch 返回 true，那么就不会调用 onTouchEvent 方法
+3. dispatchTouchEvent 分发 Touch 事件是自顶向下，而 onTouchEvent 消费事件时自底向上，onTouchEvent 和 onIntercepteTouchEvent 都是在 dispatchTouchEvent 中被调用的。
 
 
 每个 Activity 有个 Window 对象(指的就是 PhoneWindow)，PhoneWindow 中有个 DecorView，这个 DecorView 就是 Activity 的 RootView，所有在 Activity 上触发的 TouchEvent，会先派发给 DecorView 的 dispatchTouchEvent，然后由 DecorView 来决定是否往子 view 派发事件。
@@ -60,22 +60,22 @@ public boolean dispatchTouchEvent(MotionEvent ev) {
 
  + 反之如果返回 false，说明没有 view 消费掉该事件，会一路回传到 Activity 中，然后调用自己的 onTouchEvent 方法
 
- #### Activity.onTouchEvent
- ```java
- public boolean onTouchEvent(MotionEvent event) {
-    //当窗口需要关闭时，消费掉当前event
-    if (mWindow.shouldCloseOnTouch(this, event)) {
-        finish();
-        return true;
-    }
+#### Activity.onTouchEvent
+```java
+public boolean onTouchEvent(MotionEvent event) {
+  //当窗口需要关闭时，消费掉当前event
+  if (mWindow.shouldCloseOnTouch(this, event)) {
+      finish();
+      return true;
+  }
 
-    return false;
+  return false;
 }
- ```
+```
 
 上面我们只是从粗略的了解了 TouchEvent 从 Activity 的分发过程，接下来从 DecorView 的 super.dispatchTouchEvent 往下分析
 
-上文降到 DecorView 的 super.dispatchTouchEvent 最终会调用其父类(FrameLayout)的父类(ViewGroup)的 dispatchTouchEvent
+上文提到 DecorView 的 super.dispatchTouchEvent 最终会调用其父类(FrameLayout)的父类(ViewGroup)的 dispatchTouchEvent
 
 ####ViewGroup.dispatchTouchEvent
 ```java
@@ -281,7 +281,7 @@ public boolean dispatchTouchEvent(MotionEvent ev) {
 ```
 是不是一脸懵逼，是不是有点佩服 Google 的工程师们，其实简单来说 dispatchTouchEvent 主要功能就是判断是否需要拦截，需要拦截执行 onTouchEvent，不需要拦截就把 Event 分发给 child 处理
 
-### onInterceptTouchEvent
+#### onInterceptTouchEvent
 ```java
 public boolean onInterceptTouchEvent(MotionEvent ev) {
     return false;
