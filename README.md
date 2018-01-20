@@ -202,3 +202,167 @@ EventHub::EventHub(void) :
 
 * 初始化INotify（监听”/dev/input”），并添加到epoll实例
 * 创建非阻塞模式的管道，并添加到epoll;
+
+#### InputManager.cpp
+```c
+InputManager::InputManager(
+        const sp<EventHubInterface>& eventHub,
+        const sp<InputReaderPolicyInterface>& readerPolicy,
+        const sp<InputDispatcherPolicyInterface>& dispatcherPolicy) {
+    //创建InputDispatcher对象
+    mDispatcher = new InputDispatcher(dispatcherPolicy);
+    //创建InputReader对象
+    mReader = new InputReader(eventHub, readerPolicy, mDispatcher);
+    initialize();
+}
+```
+在 NativeInputManager 的初始化方法中我们看到，这里 InputDispatcher 和 InputReader 的 mPolicy 成员变量都指的是 NativeInputManager
+
+#### InputDispatcher.cpp
+```c
+InputDispatcher::InputDispatcher(const sp<InputDispatcherPolicyInterface>& policy) :
+    mPolicy(policy),
+    mPendingEvent(NULL), mLastDropReason(DROP_REASON_NOT_DROPPED),
+    mAppSwitchSawKeyDown(false), mAppSwitchDueTime(LONG_LONG_MAX),
+    mNextUnblockedEvent(NULL),
+    mDispatchEnabled(false), mDispatchFrozen(false), mInputFilterEnabled(false) {
+
+    //创建 Looper 对象
+    mLooper = new Looper(false);
+
+    mKeyRepeatState.lastKeyEntry = NULL;
+    //获得分发的参数配置
+    policy->getDispatcherConfiguration(&mConfig);
+}
+```
+上面刚刚提到这里的 policy 指向的是 NativeInputManager 对象，那么 getDispatcherConfiguration 方法在 com_android_server_input_InputManagerService.cpp 中
+```c
+void NativeInputManager::getDispatcherConfiguration(InputDispatcherConfiguration* outConfig) {
+    JNIEnv* env = jniEnv();
+
+    //从 IMS 中获取 keyRepeatTimeout
+    jint keyRepeatTimeout = env->CallIntMethod(mServiceObj,
+            gServiceClassInfo.getKeyRepeatTimeout);
+    if (!checkAndClearExceptionFromCallback(env, "getKeyRepeatTimeout")) {
+      //设置 keyRepeatTimeout
+        outConfig->keyRepeatTimeout = milliseconds_to_nanoseconds(keyRepeatTimeout);
+    }
+    //从 IMS 中获取 keyRepeatDelay
+    jint keyRepeatDelay = env->CallIntMethod(mServiceObj,
+            gServiceClassInfo.getKeyRepeatDelay);
+    if (!checkAndClearExceptionFromCallback(env, "getKeyRepeatDelay")) {
+      //设置 keyRepeatDelay
+        outConfig->keyRepeatDelay = milliseconds_to_nanoseconds(keyRepeatDelay);
+    }
+}
+```
+
+#### InputReader.cpp
+```c
+InputReader::InputReader(const sp<EventHubInterface>& eventHub,
+        const sp<InputReaderPolicyInterface>& policy,
+        const sp<InputListenerInterface>& listener) :
+        mContext(this), mEventHub(eventHub), mPolicy(policy),
+        mGlobalMetaState(0), mGeneration(1),
+        mDisableVirtualKeysTimeout(LLONG_MIN), mNextTimeout(LLONG_MAX),
+        mConfigurationChangesToRefresh(0) {
+    // 创建输入监听对象
+    mQueuedListener = new QueuedInputListener(listener);
+    {
+        AutoMutex _l(mLock);
+        refreshConfigurationLocked(0);
+        updateGlobalMetaStateLocked();
+    }
+}
+```
+此处 mQueuedListener 的成员变量 mInnerListener 便是 InputDispatcher 对象。 InputManager 创建完 InputDispatcher 和 InputReader 对象， 接下里便是调用 initialize 初始化
+
+#### initialize
+[InputManager.cpp]
+```c
+void InputManager::initialize() {
+    //创建线程“InputReader”
+    mReaderThread = new InputReaderThread(mReader);
+    //创建线程”InputDispatcher“
+    mDispatcherThread = new InputDispatcherThread(mDispatcher);
+}
+```
+[InputReader.cpp]
+```c
+InputReaderThread::InputReaderThread(const sp<InputReaderInterface>& reader) :
+        Thread(/*canCallJava*/ true), mReader(reader) {
+}
+```
+[InputDispatcher.cpp]
+```c
+InputDispatcherThread::InputDispatcherThread(const sp<InputDispatcherInterface>& dispatcher) :
+        Thread(/*canCallJava*/ true), mDispatcher(dispatcher) {
+}
+```
+初始化的主要工作就是创建两个能访问 Java 层的 native 线程。
+
+* 创建 InputReader 线程
+* 创建 InputDispatcher 线程
+
+到这里整个的 InputManagerService 对象初始化过程已完成，接下来便是调用其 start 方法。
+
+#### IMS.start()
+[InputManagerService.java]
+```java
+public void start() {
+    Slog.i(TAG, "Starting input manager");
+    nativeStart(mPtr);
+
+    ...
+
+}
+```
+start 方法比较简单，主要是调用 nativeStart 方法
+#### nativeStart
+[com_android_server_input_InputManagerService.cpp]
+```c
+static void nativeStart(JNIEnv* env, jclass /* clazz */, jlong ptr) {
+    //此处ptr记录的是NativeInputManager
+    NativeInputManager* im = reinterpret_cast<NativeInputManager*>(ptr);
+    //调用 InputManager 的 start 方法
+    status_t result = im->getInputManager()->start();
+    ...
+}
+```
+#### InputManager.start
+[InputManager.cpp]
+```c
+status_t InputManager::start() {
+    result = mDispatcherThread->run("InputDispatcher", PRIORITY_URGENT_DISPLAY);
+    result = mReaderThread->run("InputReader", PRIORITY_URGENT_DISPLAY);
+    ...
+    return OK;
+}
+```
+这里主要做的是启动在init的时候创建的两个线程
+* 启动 InputDispatcher 线程
+* 启动 InputReader 线程
+
+### 总结一下
+#### 分层视角：
+
+1. Java 层 InputManagerService：采用 android.display 线程处理 Message.
+2. JNI 的 NativeInputManager：采用 android.display 线程处理 Message,以及创建 EventHub。
+3. Native 的 InputManager：创建 InputReaderThread和 InputDispatcherThread 两个线程
+
+#### 主要功能：
+
+* IMS服务中的成员变量mPtr记录Native层的NativeInputManager对象；
+* IMS对象的初始化过程的重点在于native初始化，分别创建了以下对象：
+  + NativeInputManager；
+  + EventHub, InputManager；
+  + InputReader，InputDispatcher；
+  + InputReaderThread，InputDispatcherThread
+* IMS启动过程的主要功能是启动以下两个线程：
+  + InputReader：从EventHub取出事件并处理，再交给InputDispatcher
+  + InputDispatcher：接收来自InputReader的输入事件，并派发事件到合适的窗口。
+
+从整个启动过程，可以看到 system_server 进程中有3个线程跟 Input 输入系统息息相关，分别是 android.display, InputReader,InputDispatcher。
+
+
+Input事件流程：Linux Kernel -> IMS(InputReader -> InputDispatcher) -> WMS -> ViewRootImpl， 后续再进一步介绍。
