@@ -1,5 +1,7 @@
 要说 Android 的输入系统，最主要是 InputManagerService 也就是 IMS ，那 IMS 的启动是在哪里呢？ Zygote 的启动核心 main 方法在 SystemServer 中
 
+
+
 #### SystemServer.main
 ```java
 /**
@@ -9,6 +11,7 @@ public static void main(String[] args) {
     new SystemServer().run();
 }
 ```
+main 方法非常简单，直接是 new 一个 SystemServer 对象并调用其 run 方法
 #### SystemServer.run
 ```java
 private void run() {
@@ -41,6 +44,7 @@ private void run() {
 
 }
 ```
+InputManagerService 是在 startOtherServices 中启动的
 #### SystemServer.startOtherServices
 ```java
 /**
@@ -71,24 +75,11 @@ private void run() {
 
  }
 ```
-接下来我们来看一下 InputManagerService 的构造方法
-```java
 
-public InputManagerService(Context context) {
-    this.mContext = context;
-    //运行在线程 “android.display”
-    this.mHandler = new InputManagerHandler(DisplayThread.get().getLooper());
+InputManagerService 继承于 IInputManager.Stub， 作为 Binder 的服务端，client 端位于 InputManager 的内部，通过 IInputManager.Stub.asInterface() 获取 Binder 代理，C/S 两端通信的协议是由 IInputManager.aidl 来定义的。
 
-    ...
+![input_binder](../image/input_binder.jpg)
 
-    //初始化Native对象
-    mPtr = nativeInit(this, mContext, mHandler.getLooper().getQueue());
-
-    LocalServices.addService(InputManagerInternal.class, new LocalService());
-}
-```
-InputManagerService 继承于 IInputManager.Stub， 作为 Binder 服务端，Client 位于 InputManager 的内部通过 IInputManager.Stub.asInterface() 获取 Binder 代理端，C/S 两端通信的协议是由 IInputManager.aidl 来定义的。
-![input_binder](image/input_binder.jpg)
 #### InputManager.java
 ```java
 private static InputManager sInstance;
@@ -109,6 +100,7 @@ public static InputManager getInstance() {
   synchronized (InputManager.class) {
       if (sInstance == null) {
           IBinder b = ServiceManager.getService(Context.INPUT_SERVICE);
+          // 获取 Proxy 传给 InputManager 的构造方法
           sInstance = new InputManager(IInputManager.Stub.asInterface(b));
       }
       return sInstance;
@@ -116,7 +108,30 @@ public static InputManager getInstance() {
 }
 ```
 
-我们继续看 InputManagerService 的构造方法，其中
+#### InputManagerService.java
+```java
+public class InputManagerService extends IInputManager.Stub
+        implements Watchdog.Monitor {
+
+        ...
+
+        public InputManagerService(Context context) {
+            this.mContext = context;
+            //运行在线程 “android.display”
+            this.mHandler = new InputManagerHandler(DisplayThread.get().getLooper());
+
+            ...
+
+            //初始化Native对象
+            mPtr = nativeInit(this, mContext, mHandler.getLooper().getQueue());
+
+            LocalServices.addService(InputManagerInternal.class, new LocalService());
+        }
+
+        ...
+}
+```
+其中
 ```java
 mPtr = nativeInit(this, mContext, mHandler.getLooper().getQueue())
 ```
@@ -135,7 +150,12 @@ static jlong nativeInit(JNIEnv* env, jclass /* clazz */, jobject serviceObj, job
     return reinterpret_cast<jlong>(im); //返回Native对象的指针
 }
 ```
-接着跟进去 NativeInputManager 的构造
+nativeInit 方法的主要工作是
+  * 获取 native 层的消息队列（messageQueue）
+  * 创建 NativeInputManager 对象
+  * 最后返回 NativeInputManager 对象的指针给 Java 层
+
+#### NativeInputManager 的构造方法
 [com_android_server_input_InputManagerService.cpp]
 ```c
 NativeInputManager::NativeInputManager(jobject contextObj,
@@ -152,11 +172,12 @@ NativeInputManager::NativeInputManager(jobject contextObj,
     mInputManager = new InputManager(eventHub, this, this);//创建Native层的InputManager对象
 }
 ```
-可以看到构造方法中主要是创建了 EventHub 对象和 Native 层的 InputManager 对象，接下来我们接着看一下 EventHub 和 InputManager 都做了什么
+可以看到构造方法中主要是创建了 EventHub 对象和 Native 层的 InputManager 对象
+
+那么 EventHub 和 InputManager 的构造方法都做了什么？
 #### EventHub
 [EventHub.cpp]
 ```c
-
 static const char *DEVICE_PATH = "/dev/input";
 
 EventHub::EventHub(void) :
@@ -169,8 +190,11 @@ EventHub::EventHub(void) :
     //创建epoll
     mEpollFd = epoll_create(EPOLL_SIZE_HINT);
 
+    //创建 inotify
     mINotifyFd = inotify_init();
     //此处DEVICE_PATH为"/dev/input"，监听该设备路径
+    //IN_CREATE  在被监控目录中创建了子目录或文件。  
+    //IN_DELETE  被监控目录中有子目录或文件被删除。
     int result = inotify_add_watch(mINotifyFd, DEVICE_PATH, IN_DELETE | IN_CREATE);
 
     //添加INotify到epoll实例
@@ -197,6 +221,8 @@ EventHub::EventHub(void) :
 * 初始化INotify（监听”/dev/input”），并添加到epoll实例
 * 创建非阻塞模式的管道，并添加到epoll;
 
+用 inotify 可以检测文件系统中文件和目录发生的变化，而 epoll 可以同时检测多个文件。这里将 epoll 和 inotify 结合起来使用，当指定目录中有文件创建或者删除时 inotify 有相应的通知信息并把文件添加或者移除 epoll 的检测机制，当文件可读时，通过epoll机制读取内容。
+
 #### InputManager.cpp
 ```c
 InputManager::InputManager(
@@ -210,7 +236,7 @@ InputManager::InputManager(
     initialize();
 }
 ```
-在 NativeInputManager 的初始化方法中我们看到，这里 InputDispatcher 和 InputReader 的 mPolicy 成员变量都指的是 NativeInputManager
+回顾下 NativeInputManager 的初始化方法得知此处 InputDispatcher 和 InputReader 构造方法中的 Policy 成员变量都指的是 NativeInputManager
 
 #### InputDispatcher.cpp
 ```c
@@ -229,7 +255,9 @@ InputDispatcher::InputDispatcher(const sp<InputDispatcherPolicyInterface>& polic
     policy->getDispatcherConfiguration(&mConfig);
 }
 ```
-上面刚刚提到这里的 policy 指向的是 NativeInputManager 对象，那么 getDispatcherConfiguration 方法在 com_android_server_input_InputManagerService.cpp 中
+#### getDispatcherConfiguration
+
+[com_android_server_input_InputManagerService.cpp]
 ```c
 void NativeInputManager::getDispatcherConfiguration(InputDispatcherConfiguration* outConfig) {
     JNIEnv* env = jniEnv();
@@ -260,7 +288,7 @@ InputReader::InputReader(const sp<EventHubInterface>& eventHub,
         mGlobalMetaState(0), mGeneration(1),
         mDisableVirtualKeysTimeout(LLONG_MIN), mNextTimeout(LLONG_MAX),
         mConfigurationChangesToRefresh(0) {
-    // 创建输入监听对象
+    // 创建输入监听
     mQueuedListener = new QueuedInputListener(listener);
     {
         AutoMutex _l(mLock);
@@ -269,7 +297,9 @@ InputReader::InputReader(const sp<EventHubInterface>& eventHub,
     }
 }
 ```
-此处 mQueuedListener 的成员变量 mInnerListener 便是 InputDispatcher 对象。 InputManager 创建完 InputDispatcher 和 InputReader 对象， 接下里便是调用 initialize 初始化
+此处 mQueuedListener 的成员变量 mInnerListener 指向的是 InputDispatcher 对象。
+
+至此 InputManager 的构造方法中创建 InputDispatcher 和 InputReader 对象的逻辑已经分析完毕，接下里便是最后调用 initialize 方法进行初始化。
 
 #### initialize
 [InputManager.cpp]
@@ -281,19 +311,21 @@ void InputManager::initialize() {
     mDispatcherThread = new InputDispatcherThread(mDispatcher);
 }
 ```
+#### InputReaderThread
 [InputReader.cpp]
 ```c
 InputReaderThread::InputReaderThread(const sp<InputReaderInterface>& reader) :
         Thread(/*canCallJava*/ true), mReader(reader) {
 }
 ```
+#### InputDispatcherThread
 [InputDispatcher.cpp]
 ```c
 InputDispatcherThread::InputDispatcherThread(const sp<InputDispatcherInterface>& dispatcher) :
         Thread(/*canCallJava*/ true), mDispatcher(dispatcher) {
 }
 ```
-初始化的主要工作就是创建两个能访问 Java 层的 native 线程。
+初始化的主要工作就是创建两个 native 线程。
 
 * 创建 InputReader 线程
 * 创建 InputDispatcher 线程
@@ -311,7 +343,7 @@ public void start() {
 
 }
 ```
-start 方法比较简单，主要是调用 nativeStart 方法
+start 方法比较简单，主要是调用 nativeStart
 #### nativeStart
 [com_android_server_input_InputManagerService.cpp]
 ```c
@@ -323,6 +355,7 @@ static void nativeStart(JNIEnv* env, jclass /* clazz */, jlong ptr) {
     ...
 }
 ```
+将 ptr 转换为 NativeInputManager 指针，然后获取 Native 层的 InputManager 对象并调取其 start 方法
 #### InputManager.start
 [InputManager.cpp]
 ```c
@@ -333,30 +366,27 @@ status_t InputManager::start() {
     return OK;
 }
 ```
-这里主要做的是启动在init的时候创建的两个线程
+这里主要做的是启动在 initialize 的时候创建的两个线程
 * 启动 InputDispatcher 线程
 * 启动 InputReader 线程
 
 ### 总结一下
 #### 分层视角：
 
-1. Java 层 InputManagerService：采用 android.display 线程处理 Message.
-2. JNI 的 NativeInputManager：采用 android.display 线程处理 Message,以及创建 EventHub。
-3. Native 的 InputManager：创建 InputReaderThread和 InputDispatcherThread 两个线程
+1. Java 层 InputManagerService：采用 android.display 线程处理 Message
+2. JNI 的 NativeInputManager：采用 android.display 线程处理 Message,以及创建 EventHub
+3. Native 的 InputManager：创建和启动 InputReaderThread 和 InputDispatcherThread 两个线程
 
 #### 主要功能：
 
-* IMS服务中的成员变量mPtr记录Native层的NativeInputManager对象；
-* IMS对象的初始化过程的重点在于native初始化，分别创建了以下对象：
+* IMS中的成员变量 mPtr 记录 Native 层的 NativeInputManager 对象；
+* IMS对象的初始化过程的重点在于 native 的初始化，分别创建了以下对象：
   + NativeInputManager；
   + EventHub, InputManager；
   + InputReader，InputDispatcher；
   + InputReaderThread，InputDispatcherThread
 * IMS启动过程的主要功能是启动以下两个线程：
-  + InputReader：从EventHub取出事件并处理，再交给InputDispatcher
-  + InputDispatcher：接收来自InputReader的输入事件，并派发事件到合适的窗口。
+  + InputReader：从 EventHub 取出事件并处理，再交给 InputDispatcher
+  + InputDispatcher：接收并派发来自 InputReader 的输入事件
 
-从整个启动过程，可以看到 system_server 进程中有3个线程跟 Input 输入系统息息相关，分别是 android.display, InputReader,InputDispatcher。
-
-
-Input事件流程：Linux Kernel -> IMS(InputReader -> InputDispatcher) -> WMS -> ViewRootImpl， 后续再进一步介绍。
+从整个启动过程，可以看到 system_server 进程中有3个线程跟 Input 系统密切相关，分别是 android.display, InputReader, InputDispatcher。
