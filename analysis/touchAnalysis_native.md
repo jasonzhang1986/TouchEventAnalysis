@@ -1,6 +1,8 @@
-要说 Android 的输入系统，最主要是 InputManagerService 也就是 IMS ，那 IMS 的启动是在哪里呢？ Zygote 的启动核心 main 方法在 SystemServer 中
+>书接上回，本期主要分析 Input 系统的 Native（驱动）部分，也就是 **Kernel -> IMS(InputReader -> InputDispather) -> WMS**
 
+其中最核心的部分是 IMS ，也就是 InputManagerService ，那么问题来了， IMS 是从哪里被启动的呢？
 
+了解 Zygote 启动流程的应该知道，流程的最后会调动 SystemServer 的 main 方法，so，今天的分析就从这个 main 方法开始
 
 #### SystemServer.main
 ```java
@@ -390,3 +392,5 @@ status_t InputManager::start() {
   + InputDispatcher：接收并派发来自 InputReader 的输入事件
 
 从整个启动过程，可以看到 system_server 进程中有3个线程跟 Input 系统密切相关，分别是 android.display, InputReader, InputDispatcher。
+
+下一篇会着重分析 InputReader 和 InputDispather 是如何读取消息、分发消息，敬请期待。
