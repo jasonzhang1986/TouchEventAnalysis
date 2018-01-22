@@ -272,7 +272,7 @@ while (mPendingEventIndex < mPendingEventCount) {
 ```
 通过 EventHub 的构造方法和 getEvents 方法可以很明显的看出 EventHub 采用 INotify + epoll 机制实现监听目录 /dev/input 下的设备节点，经过 EventHub将 input_event 结构体 + deviceId 转换成 RawEvent 结构体
 #### RawEvent
-[InputEventReader.h]
+[include/linux/Input.h]
 ```c
 struct input_event {
  struct timeval time; //事件发生的时间点
@@ -298,3 +298,264 @@ struct RawEvent {
 
 ####processEventsLocked
 [InputReader.cpp]
+```c
+void InputReader::processEventsLocked(const RawEvent* rawEvents, size_t count) {
+    for (const RawEvent* rawEvent = rawEvents; count;) {
+        int32_t type = rawEvent->type;
+        size_t batchSize = 1;
+        if (type < EventHubInterface::FIRST_SYNTHETIC_EVENT) {
+            int32_t deviceId = rawEvent->deviceId;            
+            while (batchSize < count) {
+                if (rawEvent[batchSize].type >= EventHubInterface::FIRST_SYNTHETIC_EVENT
+                        || rawEvent[batchSize].deviceId != deviceId) {
+                    break;
+                }
+                batchSize += 1;
+            }
+            // while 循环的作用是查找同一个 device 的事件，然后交给如下方法处理
+            processEventsForDeviceLocked(deviceId, rawEvent, batchSize);
+        } else {
+            switch (rawEvent->type) {
+            case EventHubInterface::DEVICE_ADDED:
+                //有设备添加
+                addDeviceLocked(rawEvent->when, rawEvent->deviceId);
+                break;
+            case EventHubInterface::DEVICE_REMOVED:
+                //有设备移除
+                removeDeviceLocked(rawEvent->when, rawEvent->deviceId);
+                break;
+            case EventHubInterface::FINISHED_DEVICE_SCAN:
+                //设备扫描完成
+                handleConfigurationChangedLocked(rawEvent->when);
+                break;
+            default:
+                ALOG_ASSERT(false); // can't happen
+                break;
+            }
+        }
+        count -= batchSize;
+        rawEvent += batchSize;
+    }
+}
+```
+可以看到上述代码中的 while 循环是从 rawEvent 中获取对应 device 的所有事件，然后一起交给 processEventsForDeviceLocked 处理
+#### processEventsForDeviceLocked
+```c
+void InputReader::processEventsForDeviceLocked(int32_t deviceId,
+        const RawEvent* rawEvents, size_t count) {
+    ssize_t deviceIndex = mDevices.indexOfKey(deviceId);
+
+    ...
+
+    InputDevice* device = mDevices.valueAt(deviceIndex);
+
+    ...
+
+    device->process(rawEvents, count);
+}
+```
+主要功能是根据 deviceId 找到对应的 Device， 然后调用 device 的 process 处理方法
+#### InputDevice.process
+[InputReader.cpp]
+```c
+void InputDevice::process(const RawEvent* rawEvents, size_t count) {    
+    size_t numMappers = mMappers.size();
+    for (const RawEvent* rawEvent = rawEvents; count--; rawEvent++) {
+        if  ...
+          ...
+        } else {
+            for (size_t i = 0; i < numMappers; i++) {
+                InputMapper* mapper = mMappers[i];
+                mapper->process(rawEvent);
+            }
+        }
+    }
+}
+```
+可以看到核心代码是把 RawEvent 交给各个 InputMapper 处理。 InputMapper 的逻辑是在 createDeviceLocked 方法中
+#### createDeviceLocked
+```c
+InputDevice* InputReader::createDeviceLocked(int32_t deviceId, int32_t controllerNumber,
+        const InputDeviceIdentifier& identifier, uint32_t classes) {
+    //创建InputDevice对象
+    InputDevice* device = new InputDevice(&mContext, deviceId, bumpGenerationLocked(),
+            controllerNumber, identifier, classes);
+    ...
+
+    //获取键盘源类型
+    ...
+
+    //添加键盘类设备InputMapper
+    if (keyboardSource != 0) {
+        device->addMapper(new KeyboardInputMapper(device, keyboardSource, keyboardType));
+    }
+
+    //添加鼠标类设备InputMapper
+    if (classes & INPUT_DEVICE_CLASS_CURSOR) {
+        device->addMapper(new CursorInputMapper(device));
+    }
+
+    //添加触摸屏设备InputMapper
+    if (classes & INPUT_DEVICE_CLASS_TOUCH_MT) {
+        device->addMapper(new MultiTouchInputMapper(device));
+    } else if (classes & INPUT_DEVICE_CLASS_TOUCH) {
+        device->addMapper(new SingleTouchInputMapper(device));
+    }
+    ...
+    return device;
+}
+```
+
+这里以 SingleTouchInputMapper 为例简单过一遍流程
+#### SingleTouchInputMapper::process
+```c
+void SingleTouchInputMapper::process(const RawEvent* rawEvent) {
+    TouchInputMapper::process(rawEvent); //调用父类的process方法
+
+    mSingleTouchMotionAccumulator.process(rawEvent); //根据event的type获取对应的值
+}
+```
+#### TouchInputMapper::process
+```c
+void TouchInputMapper::process(const RawEvent* rawEvent) {
+    //又三个累加器，获取后续处理需要的值
+    mCursorButtonAccumulator.process(rawEvent);
+    mCursorScrollAccumulator.process(rawEvent);
+    mTouchButtonAccumulator.process(rawEvent);
+
+    //同步
+    if (rawEvent->type == EV_SYN && rawEvent->code == SYN_REPORT) {
+        sync(rawEvent->when);
+    }
+}
+```
+#### sync
+```c
+void TouchInputMapper::sync(nsecs_t when) {
+    const RawState* last = mRawStatesPending.isEmpty() ?
+            &mCurrentRawState : &mRawStatesPending.top();
+
+    ...
+
+    // Sync touch
+    syncTouch(when, next);
+
+    // Assign pointer ids.
+    if (!mHavePointerIds) {
+        assignPointerIds(last, next);
+    }
+
+    //处理 RawTouches
+    processRawTouches(false /*timeout*/);
+}
+```
+接下来的是 processRawTouches  -> cookAndDispatch -> dispatchPointerUsage -> dispatchPointerGestures -> dispatchMotion
+
+#### dispatchMotion
+```c
+void TouchInputMapper::dispatchMotion(nsecs_t when, uint32_t policyFlags, uint32_t source,
+        int32_t action, int32_t actionButton, int32_t flags,
+        int32_t metaState, int32_t buttonState, int32_t edgeFlags,
+        const PointerProperties* properties, const PointerCoords* coords,
+        const uint32_t* idToIndex, BitSet32 idBits, int32_t changedId,
+        float xPrecision, float yPrecision, nsecs_t downTime) {
+
+        ...
+
+        ALOGD_READER("notifyMotion call dispatcher");
+        //事件处理
+        getListener()->notifyMotion(&args);
+
+        ...
+}
+```
+这里的 getListener 是 InputReader 的成员变量 mQueuedListener, 回顾下 InputReader 的构造方法，mQueuedListener 是使用参数 listener 构建的，而这个 listener 是在 InputManager 中 new 的 InputDispater 对象
+#### QueuedInputListener::notifyMotion
+[InputListener.cpp]
+```c
+void QueuedInputListener::notifyMotion(const NotifyMotionArgs* args) {
+    mArgsQueue.push(new NotifyMotionArgs(*args));
+}
+```
+mArgsQueue的数据类型为Vector<NotifyArgs*>，将该 Motion 事件压人该栈顶。 到这里整个事件加工完成, 再往后就是将事件发送给 InputDispatcher 线程.
+
+接下来,再回到 InputReader 的 loopOnce 过程, 可知当执行完 processEventsLocked 后, 然后便开始执行 mQueuedListener->flush() 过程, 如下文
+#### QueuedInputListener.flush
+[InputListener.cpp]
+```c
+void QueuedInputListener::flush() {
+    size_t count = mArgsQueue.size();
+    for (size_t i = 0; i < count; i++) {
+        NotifyArgs* args = mArgsQueue[i];        
+        args->notify(mInnerListener);
+        delete args;
+    }
+    mArgsQueue.clear();
+}
+```
+遍历整个mArgsQueue数组, 调用 NotifyArgs 的 notify 方法，从InputManager对象初始化的过程可知，mInnerListener 便是 InputDispatcher 对象。
+#### NotifyKeyArgs.notify
+[InputListener.cpp]
+```c
+void NotifyMotionArgs::notify(const sp<InputListenerInterface>& listener) const {
+    listener->notifyMotion(this); // this指是NotifyMotionArgs
+}
+```
+#### InputDispater.notifyMotion
+```c
+void InputDispatcher::notifyMotion(const NotifyMotionArgs* args) {
+
+    if (!validateMotionEvent(args->action, args->actionButton,
+                args->pointerCount, args->pointerProperties)) {
+        return;
+    }
+
+    uint32_t policyFlags = args->policyFlags;
+    policyFlags |= POLICY_FLAG_TRUSTED;
+    //加入队列前这里执行拦截动作
+    mPolicy->interceptMotionBeforeQueueing(args->eventTime, /*byref*/ policyFlags);
+
+
+    bool needWake;
+    { // acquire lock
+        mLock.lock();
+        //过滤输入事件，如果返回 True，事件不会往下下发
+        if (shouldSendMotionToInputFilterLocked(args)) {
+            mLock.unlock();
+
+            MotionEvent event;
+            event.initialize(args->deviceId, args->source, args->action, args->actionButton,
+                    args->flags, args->edgeFlags, args->metaState, args->buttonState,
+                    0, 0, args->xPrecision, args->yPrecision,
+                    args->downTime, args->eventTime,
+                    args->pointerCount, args->pointerProperties, args->pointerCoords);
+
+            policyFlags |= POLICY_FLAG_FILTERED;
+            if (!mPolicy->filterInputEvent(&event, policyFlags)) {
+                return; // event was consumed by the filter
+            }
+
+            mLock.lock();
+        }
+
+        // Just enqueue a new motion event.
+        MotionEntry* newEntry = new MotionEntry(args->eventTime,
+                args->deviceId, args->source, policyFlags,
+                args->action, args->actionButton, args->flags,
+                args->metaState, args->buttonState,
+                args->edgeFlags, args->xPrecision, args->yPrecision, args->downTime,
+                args->displayId,
+                args->pointerCount, args->pointerProperties, args->pointerCoords, 0, 0);
+        //生成MotionEntry，并调用enqueueInboundEventLocked，将该事件加入到InputDispatcherd的成员变量mInboundQueue
+        needWake = enqueueInboundEventLocked(newEntry);
+        mLock.unlock();
+    } // release lock
+
+    if (needWake) {
+        mLooper->wake();
+    }
+}
+```
+enqueueInboundEventLocked 中根据 entry 的 type 值分开做处理，通过findTouchedWindowAtLocked找到处理的window
+
+回到notifyMotion中，入队列之后，如果needWake，调用Looper的Wake
