@@ -494,7 +494,7 @@ void QueuedInputListener::flush() {
 }
 ```
 遍历整个mArgsQueue数组, 调用 NotifyArgs 的 notify 方法，从InputManager对象初始化的过程可知，mInnerListener 便是 InputDispatcher 对象。
-#### NotifyKeyArgs.notify
+#### NotifyMotionArgs.notify
 [InputListener.cpp]
 ```c
 void NotifyMotionArgs::notify(const sp<InputListenerInterface>& listener) const {
@@ -558,4 +558,30 @@ void InputDispatcher::notifyMotion(const NotifyMotionArgs* args) {
 ```
 enqueueInboundEventLocked 中根据 entry 的 type 值分开做处理，通过findTouchedWindowAtLocked找到处理的window
 
-回到notifyMotion中，入队列之后，如果needWake，调用Looper的Wake
+回到notifyMotion中，入队列之后，如果needWake=True，调用 Looper 的 wake 方法
+#### Looper.wake
+[system/core/libutils/Looper.cpp]
+```c
+void Looper::wake() {
+    uint64_t inc = 1;
+    ssize_t nWrite = TEMP_FAILURE_RETRY(write(mWakeEventFd, &inc, sizeof(uint64_t)));
+    if (nWrite != sizeof(uint64_t)) {
+        if (errno != EAGAIN) {
+            ALOGW("Could not write wake signal: %s", strerror(errno));
+        }
+    }
+}
+```
+调用 enqueueInboundEventLocked() 方法来决定是否需要将数字1写入句柄 mWakeEventFd 来唤醒 InputDispatcher 线程。
+
+### 总结
+#### 主要功能
+InputReader 整个过程有多次事件的封装转换，核心工作主要有以下三个步骤：
++ getEvents：通过 EventHub (监听目录/dev/input)读取事件放入 mEventBuffer，再将事件 input_event 转换为 RawEvent
++ processEventsLocked: 对事件进行加工, 转换 RawEvent -> NotifyMotionArgs(NotifyArgs)
++ QueuedListener->flush：将事件发送到 InputDispatcher 线程, 转换 NotifyMotionArgs -> MotionEntry(EventEntry)
+
+> InputReader线程不断循环地执行 InputReader.loopOnce(), 每次处理完生成的是 EventEntry(比如KeyEntry, MotionEntry), 接下来的工作就交给 InputDispatcher 线程。
+
+#### 时序图
+![InputReader_seq](../image/InputReader_seq.jpg)
