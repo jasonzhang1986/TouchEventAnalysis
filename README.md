@@ -7,7 +7,7 @@
 **Linux Kernel -> IMS(InputReader -> InputDispatcher) -> WMS -> ViewRootImpl -> Activity -> View**
 
 我们这次把流程拆分成三部分来分析：
-1. Linux Kernel -> IMS(InputReader -> InputDispatcher) -> WMS
+1. Linux Kernel -> IMS([InputReader](analysis/touchAnalysis_native_2.md) -> [InputDispatcher](analysis/touchAnalysis_native_3.md)) -> WMS [链接](analysis/touchAnalysis_native.md)
 2. WMS -> ViewRootImpl -> Activity
 3. Activity -> ViewGroup -> View
 
