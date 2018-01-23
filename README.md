@@ -8,12 +8,12 @@
 
 我们这次把流程拆分成三部分来分析：
 1. Linux Kernel -> IMS([InputReader](analysis/touchAnalysis_native_2.md) -> [InputDispatcher](analysis/touchAnalysis_native_3.md)) -> WMS [链接](analysis/touchAnalysis_native.md)
-2. WMS -> ViewRootImpl -> Activity
-3. Activity -> ViewGroup -> View
+2. WMS -> ViewRootImpl -> Activity [链接](analysis/touchAnalysis_ipc.md)
+3. Activity -> ViewGroup -> View [链接](analysis/touchAnalysis_framework.md)
 
 平时开发过程中最熟悉的是从 Activity 开始的第三部分，这一部分可以绘制一个很熟悉的流程图，如下：
 ![img](image/TouchEvent.png)
 
 那和 Activity 关系也很密切的 **Part 2**，以及偏向底层（驱动层、Native层）的 **Part 1** 是否也可以绘制一个类似的流程图？
 
-答案是肯定的，由我来带着大家逐步揭开 Input 系统的面纱，最终绘制出最完整的流程图。
+答案是肯定的，由我来带着大家逐步揭开 Input 系统的面纱，最终绘制出最[完整的流程图](analysis/touch_lifecircle.md)。
