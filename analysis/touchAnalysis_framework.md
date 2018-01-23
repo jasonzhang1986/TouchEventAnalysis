@@ -534,3 +534,5 @@ public boolean onTouchEvent(MotionEvent event) {
 ```
 到这里我们分析了 TouchEvent 从 Activity 开始到被消费的整个过程，通过下面的流程图来回顾下大致的流程：
 ![流程图](../image/TouchEvent.png)
+
+**[完整流程](touch_lifecircle.md)揭晓**

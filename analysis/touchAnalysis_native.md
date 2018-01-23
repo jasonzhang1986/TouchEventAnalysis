@@ -393,4 +393,4 @@ status_t InputManager::start() {
 
 从整个启动过程，可以看到 system_server 进程中有3个线程跟 Input 系统密切相关，分别是 android.display, InputReader, InputDispatcher。
 
-下一篇会着重分析 InputReader 和 InputDispather 是如何读取消息、分发消息，敬请期待。
+下一篇会着重分析 [InputReader](touchAnalysis_native_2.md) 和 [InputDispather](touchAnalysis_native_3) 是如何读取消息、分发消息，敬请期待。
