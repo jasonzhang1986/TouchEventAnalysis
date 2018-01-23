@@ -250,4 +250,13 @@ status_t InputChannel::sendMessage(const InputMessage* msg) {
     ...
 }
 ```
-向目标mFd写入消息，这里的mFd会唤醒处于 epoll_wait 状态的 UI 线程。
+向目标mFd写入消息，会唤醒处于 epoll_wait 状态的 UI 线程。其实是 UI 线程的 Looper，熟悉 Looper 的应该知道，Looper 的 pollInner 也是在 epoll_wait 等待事件，此时就中断了 Looper 的等待并开始处理消息，其中的代码挺多，这里简单列一下调用流程
+```
+->Looper::pollInner
+  -> NativeInputEventReceiver::handleEvent [android_view_InputEventReceiver.cpp]
+    -> NativeInputEventReceiver::consumeEvents [android_view_InputEventReceiver.cpp]
+      -> InputConsumer::consume  [InputTransport.cpp]
+        -> InputChannel::receiveMessage [InputTransport.cpp]
+          -> InputEventReceiver.dispachInputEvent [InputEventReceiver.java]
+```
+到 InputEventReceiver 终于回到了 Java 层
