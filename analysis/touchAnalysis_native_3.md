@@ -259,4 +259,6 @@ status_t InputChannel::sendMessage(const InputMessage* msg) {
         -> InputChannel::receiveMessage [InputTransport.cpp]
           -> InputEventReceiver.dispachInputEvent [InputEventReceiver.java]
 ```
-到 InputEventReceiver 终于回到了 Java 层, 下一篇会从 InputEventReceiver 收到事件消息开始分析如何传递给 Activity [链接](touchAnalysis_ipc.md)。
+到 InputEventReceiver 终于回到了 Java 层, 下一篇会从 InputEventReceiver 收到事件消息开始分析如何传递给 Activity 。
+
+**[下一篇 中间层部分](touchAnalysis_ipc.md)**

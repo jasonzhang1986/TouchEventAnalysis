@@ -585,3 +585,5 @@ InputReader 整个过程有多次事件的封装转换，核心工作主要有�
 
 #### 时序图
 ![InputReader_seq](../image/InputReader_seq.jpg)
+
+**[下一篇 InputDispatcher](touchAnalysis_native_3.md)**

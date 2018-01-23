@@ -169,4 +169,6 @@ public boolean superDispatchTouchEvent(MotionEvent event) {
 
 >那问题来了，为什么绕这一圈呢？ 为什么 InputStage 不直接把 Event 传给 Activity 处理？
 
-我的理解可能是为了解耦吧，ViewRootImpl 其实是不知道 Activity 的存在的，但它持有 DecorView 的引用，所以需要经过 DecorView， DecorView 起到了中间桥梁的作用
+我的理解可能是为了解耦吧，ViewRootImpl 其实是不知道 Activity 的存在的，但它持有 DecorView 的引用，所以需要经过 DecorView， DecorView 起到了中间桥梁的作用。
+
+**[下一篇 frameworks](touchAnalysis_framework.md)**
