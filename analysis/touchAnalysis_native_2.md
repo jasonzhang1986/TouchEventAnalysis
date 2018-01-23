@@ -579,7 +579,7 @@ void Looper::wake() {
 InputReader 整个过程有多次事件的封装转换，核心工作主要有以下三个步骤：
 + getEvents：通过 EventHub (监听目录/dev/input)读取事件放入 mEventBuffer，再将事件 input_event 转换为 RawEvent
 + processEventsLocked: 对事件进行加工, 转换 RawEvent -> NotifyMotionArgs(NotifyArgs)
-+ QueuedListener->flush：将事件发送到 InputDispatcher 线程, 转换 NotifyMotionArgs -> MotionEntry(EventEntry)
++ QueuedListener->flush：将事件发送到 InputDispatcher 线程, 转换 NotifyMotionArgs -> MotionEntry(EventEntry)
 
 > InputReader线程不断循环地执行 InputReader.loopOnce(), 每次处理完生成的是 EventEntry(比如KeyEntry, MotionEntry), 接下来的工作就交给 InputDispatcher 线程。
 
