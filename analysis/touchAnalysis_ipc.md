@@ -1,3 +1,5 @@
+> 本篇主要分析从 InputEventReceiver 收到消息后，如何层层传递到 Activity 的
+
 #### InputEventReceiver.dispatchInputEvent
 ```Java
 private void dispatchInputEvent(int seq, InputEvent event) {

@@ -17,3 +17,6 @@
 那和 Activity 关系也很密切的 **Part 2**，以及偏向底层（驱动层、Native层）的 **Part 1** 是否也可以绘制一个类似的流程图？
 
 答案是肯定的，由我来带着大家逐步揭开 Input 系统的面纱，最终绘制出最[完整的流程图](analysis/touch_lifecircle.md)。
+
+### 链接
+[Native层概述](analysis/touchAnalysis_native.md)、[InputReader](analysis/touchAnalysis_native_2.md)、[InputDispatcher](analysis/touchAnalysis_native_3.md)、[中间层](analysis/touchAnalysis_ipc.md)、[frameworks](analysis/touchAnalysis_framework.md)
