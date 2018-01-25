@@ -12,7 +12,7 @@ import android.widget.Button
  */
 class MainActivity : Activity() {
     private val TAG:String = "Activity"
-    private var btn: Button? = null
+    private lateinit var btn: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,7 +22,7 @@ class MainActivity : Activity() {
     }
 
     fun initData() {
-        btn!!.setOnClickListener{ _ -> Log.i(TAG, "btn onClick") }
+        btn.setOnClickListener{ _ -> Log.i(TAG, "btn onClick") }
 //        btn!!.setOnTouchListener{ _, ev ->
 //            Log.i(TAG, "btn onTouch action = " + Utils.getToutchEventAction(ev))
 //            false
