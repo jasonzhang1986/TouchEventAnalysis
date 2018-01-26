@@ -15,11 +15,22 @@ import me.jifengzhang.toucheventanalysis.R
 class TestActivity : Activity() {
     private lateinit var _head: TextView
     private lateinit var _listView: ListView
+    private  var listData: ArrayList<String> = ArrayList()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_test)
         _head = findViewById(R.id.head)
         _listView = findViewById(R.id.list)
+
+        var x = 0
+        while (x < 50) {
+            listData.add(""+x)
+            x += 1
+        }
+        var adapter = MyAdapter()
+        adapter.setData(listData)
+        adapter.notifyDataSetChanged()
     }
 
     private class MyAdapter : BaseAdapter() {
