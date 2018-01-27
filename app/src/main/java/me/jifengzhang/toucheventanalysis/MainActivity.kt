@@ -1,10 +1,12 @@
 package me.jifengzhang.toucheventanalysis
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.widget.Button
+import me.jifengzhang.toucheventanalysis.scrollconfit.TestActivity
 
 
 /**
@@ -22,7 +24,11 @@ class MainActivity : Activity() {
     }
 
     fun initData() {
-        btn.setOnClickListener{ _ -> Log.i(TAG, "btn onClick") }
+        btn.setOnClickListener{ _ ->
+            Log.i(TAG, "btn onClick")
+            startActivity(Intent(this, TestActivity::class.java))
+        }
+
 //        btn!!.setOnTouchListener{ _, ev ->
 //            Log.i(TAG, "btn onTouch action = " + Utils.getToutchEventAction(ev))
 //            false

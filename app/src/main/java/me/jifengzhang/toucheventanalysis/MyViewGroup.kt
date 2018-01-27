@@ -31,11 +31,11 @@ class MyViewGroup : LinearLayout {
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         Log.i(TAG, hashcodeStr() + " onInterceptTouchEvent action = " + Utils.getToutchEventAction(ev))
-//        val ret = super.onInterceptTouchEvent(ev)
-        var ret = false
-        if (ev.action == MotionEvent.ACTION_UP) {
-            ret = true
-        }
+        val ret = super.onInterceptTouchEvent(ev)
+//        var ret = false
+//        if (ev.action == MotionEvent.ACTION_UP) {
+//            ret = true
+//        }
         Log.i(TAG, Utils.formatString("%s onInterceptTouchEvent action = %s, ret = %s", hashcodeStr(), Utils.getToutchEventAction(ev), ret))
         return ret
     }
