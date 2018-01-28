@@ -1,9 +1,6 @@
 package me.jifengzhang.toucheventanalysis.scrollconfit
 
-import android.annotation.SuppressLint
 import android.app.Activity
-import android.graphics.Color
-import android.graphics.Color.BLACK
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -62,7 +59,7 @@ class TestActivity : Activity() {
                 retView = View.inflate(parent?.context, R.layout.item, null)
                 holder = ViewHolder()
                 holder.content = retView.findViewById(R.id.tv)
-                retView.setTag(holder)
+                retView.tag = holder
             } else {
                 holder = convertView.tag as ViewHolder
                 retView = convertView
