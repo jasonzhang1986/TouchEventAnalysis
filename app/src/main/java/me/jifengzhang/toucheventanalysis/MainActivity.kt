@@ -36,16 +36,16 @@ class MainActivity : Activity() {
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
-        Log.i(TAG,"dispatchTouchEvent action = " + Utils.getToutchEventAction(ev))
+        Log.i(TAG,"[ dispatchTouchEvent action = " + Utils.getToutchEventAction(ev))
         val ret: Boolean = super.dispatchTouchEvent(ev)
-        Log.i(TAG, "dispatchTouchEvent action = " + Utils.getToutchEventAction(ev) + " ret = " + ret)
+        Log.i(TAG, "dispatchTouchEvent action = " + Utils.getToutchEventAction(ev) + " ret = " + ret + "]")
         return ret
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
-        Log.i(TAG, "onTouchEvent action = " + Utils.getToutchEventAction(event))
+        Log.i(TAG, "[ onTouchEvent action = " + Utils.getToutchEventAction(event))
         val ret:Boolean = super.onTouchEvent(event)
-        Log.i(TAG, "onTouchEvent action = " + Utils.getToutchEventAction(event) + " ret = " + ret)
+        Log.i(TAG, "onTouchEvent action = " + Utils.getToutchEventAction(event) + " ret = " + ret + "]")
         return ret
     }
 
