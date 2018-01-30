@@ -79,3 +79,42 @@ I/Activity: [ dispatchTouchEvent action = Down[0]
  I/Activity: dispatchTouchEvent action = Up[1] ret = true]
  I/Button: performClick
 ```
+#### 情况3 - View 消费 Down，但 ViewGroup2 拦截 up 事件
+```java
+I/Activity: [ dispatchTouchEvent action = Down[0]
+I/ViewGroup: |--------------------ViewGroup dispatchTouchEvent begin ----------------------------|
+I/ViewGroup:  dispatchTouchEvent action = Down[0]
+I/ViewGroup:     onInterceptTouchEvent action = Down[0]
+I/ViewGroup:     onInterceptTouchEvent action = Down[0], ret = false
+I/ViewGroup2: |--------------------ViewGroup2 dispatchTouchEvent begin ----------------------------|
+I/ViewGroup2:   dispatchTouchEvent action = Down[0]
+I/ViewGroup2:     onInterceptTouchEvent action = Down[0]
+I/ViewGroup2:    onInterceptTouchEvent action = Down[0], ret = false
+I/Button: dispatchTouchEvent action = Down[0]
+I/Button: onTouchEvent action = Down[0]
+I/Button: onTouchEvent action = Down[0]  ret = true
+I/Button: dispatchTouchEvent action = Down[0]  ret = true
+I/ViewGroup2:   dispatchTouchEvent action = Down[0], ret = true
+I/ViewGroup2: |--------------------ViewGroup2 dispatchTouchEvent end----------------------------|
+I/ViewGroup:  dispatchTouchEvent action = Down[0], ret = true
+I/ViewGroup: |--------------------ViewGroup dispatchTouchEvent end----------------------------|
+I/Activity: dispatchTouchEvent action = Down[0] ret = true]
+I/Activity: [ dispatchTouchEvent action = Up[1]
+I/ViewGroup: |--------------------ViewGroup dispatchTouchEvent begin ----------------------------|
+I/ViewGroup:  dispatchTouchEvent action = Up[1]
+I/ViewGroup:     onInterceptTouchEvent action = Up[1]
+I/ViewGroup:     onInterceptTouchEvent action = Up[1], ret = false
+I/ViewGroup2: |--------------------ViewGroup2 dispatchTouchEvent begin ----------------------------|
+I/ViewGroup2:   dispatchTouchEvent action = Up[1]
+I/ViewGroup2:     onInterceptTouchEvent action = Up[1]
+I/ViewGroup2:    onInterceptTouchEvent action = Up[1], ret = true
+I/Button: dispatchTouchEvent action = Cancel[3]
+I/Button: onTouchEvent action = Cancel[3]
+I/Button: onTouchEvent action = Cancel[3]  ret = true
+I/Button: dispatchTouchEvent action = Cancel[3]  ret = true
+I/ViewGroup2:   dispatchTouchEvent action = Up[1], ret = true
+I/ViewGroup2: |--------------------ViewGroup2 dispatchTouchEvent end----------------------------|
+I/ViewGroup:  dispatchTouchEvent action = Up[1], ret = true
+I/ViewGroup: |--------------------ViewGroup dispatchTouchEvent end----------------------------|
+I/Activity: dispatchTouchEvent action = Up[1] ret = true]
+```
