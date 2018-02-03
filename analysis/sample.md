@@ -5,8 +5,9 @@
 UI 结构如上图所示，通过这个例子来分析如下几种情况
 1. 默认情况，全部返回super，默认情况是不拦截不消费事件的
 2. View 的 onTouchEvent() 消费 down 事件，其他默认
-3. ViewGroup2 的 onTouchEvent() 消费 down 事件，其他默认
-4. ViewGroup2 的 onInterceptTouchEvent() 拦截 down 之后的事件
+3. View 消费 Down，但 ViewGroup2 拦截 up 事件
+4. ViewGroup2 的 onTouchEvent() 消费 down 事件，其他默认
+5. ViewGroup2 的 onInterceptTouchEvent() 拦截 down 之后的事件
 
 #### 情况1 - 全部采用默认，也就是 return false
 ```java
@@ -118,3 +119,41 @@ I/ViewGroup:  dispatchTouchEvent action = Up[1], ret = true
 I/ViewGroup: |--------------------ViewGroup dispatchTouchEvent end----------------------------|
 I/Activity: dispatchTouchEvent action = Up[1] ret = true]
 ```
+#### ViewGroup2 的 onTouchEvent() 消费 down 事件，其他默认
+```java
+I/Activity: [ dispatchTouchEvent action = Down[0]
+ I/ViewGroup: |--------------------ViewGroup dispatchTouchEvent begin ----------------------------|
+ I/ViewGroup:  dispatchTouchEvent action = Down[0]
+ I/ViewGroup:     onInterceptTouchEvent action = Down[0]
+ I/ViewGroup:     onInterceptTouchEvent action = Down[0], ret = false
+ I/ViewGroup2: |--------------------ViewGroup2 dispatchTouchEvent begin ----------------------------|
+ I/ViewGroup2:   dispatchTouchEvent action = Down[0]
+ I/ViewGroup2:     onInterceptTouchEvent action = Down[0]
+ I/ViewGroup2:    onInterceptTouchEvent action = Down[0], ret = false
+ I/MyTextView: [dispatchTouchEvent Down[0]
+ I/MyTextView: [onTouchEvent action = Down[0]
+ I/MyTextView: onTouchEvent action = Down[0]  ret = false]
+ I/MyTextView: dispatchTouchEvent Down[0], ret = false]
+ I/ViewGroup2:       onTouchEvent action = Down[0]
+ I/ViewGroup2:     onTouchEvent action = Down[0], ret = true
+ I/ViewGroup2:   dispatchTouchEvent action = Down[0], ret = true
+ I/ViewGroup2: |--------------------ViewGroup2 dispatchTouchEvent end----------------------------|
+ I/ViewGroup:  dispatchTouchEvent action = Down[0], ret = true
+ I/ViewGroup: |--------------------ViewGroup dispatchTouchEvent end----------------------------|
+ I/Activity: dispatchTouchEvent action = Down[0] ret = true]
+ I/Activity: [ dispatchTouchEvent action = Up[1]
+ I/ViewGroup: |--------------------ViewGroup dispatchTouchEvent begin ----------------------------|
+ I/ViewGroup:  dispatchTouchEvent action = Up[1]
+ I/ViewGroup:     onInterceptTouchEvent action = Up[1]
+ I/ViewGroup:     onInterceptTouchEvent action = Up[1], ret = false
+ I/ViewGroup2: |--------------------ViewGroup2 dispatchTouchEvent begin ----------------------------|
+ I/ViewGroup2:   dispatchTouchEvent action = Up[1]
+ I/ViewGroup2:       onTouchEvent action = Up[1]
+ I/ViewGroup2:     onTouchEvent action = Up[1], ret = true
+ I/ViewGroup2:   dispatchTouchEvent action = Up[1], ret = true
+ I/ViewGroup2: |--------------------ViewGroup2 dispatchTouchEvent end----------------------------|
+ I/ViewGroup:  dispatchTouchEvent action = Up[1], ret = true
+ I/ViewGroup: |--------------------ViewGroup dispatchTouchEvent end----------------------------|
+ I/Activity: dispatchTouchEvent action = Up[1] ret = true]
+```
+可以看到 TextView 没有消费 Down 事件，返回到 ViewGroup2 的 onTouchEvent 中，此时 ViewGroup2 的 onTouchEvent 返回 True，认为 ViewGroup2 消费了该事件，之后的 up 事件到 ViewGroup2 就截止
