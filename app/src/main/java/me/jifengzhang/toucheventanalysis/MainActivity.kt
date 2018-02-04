@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.widget.Button
+import android.widget.TextView
 import me.jifengzhang.toucheventanalysis.scrollconfit.TestActivity
 
 
@@ -15,11 +16,13 @@ import me.jifengzhang.toucheventanalysis.scrollconfit.TestActivity
 class MainActivity : Activity() {
     private val TAG:String = "Activity"
     private lateinit var btn: Button
+    private lateinit var tv: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         btn = findViewById(R.id.btn1)
+        tv = findViewById(R.id.tv)
         initData()
     }
 

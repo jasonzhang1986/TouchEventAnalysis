@@ -7,7 +7,6 @@ UI 结构如上图所示，通过这个例子来分析如下几种情况
 2. View 的 onTouchEvent() 消费 down 事件，其他默认
 3. View 消费 Down，但 ViewGroup2 拦截 up 事件
 4. ViewGroup2 的 onTouchEvent() 消费 down 事件，其他默认
-5. ViewGroup2 的 onInterceptTouchEvent() 拦截 down 之后的事件
 
 #### 情况1 - 全部采用默认，也就是 return false
 ```java

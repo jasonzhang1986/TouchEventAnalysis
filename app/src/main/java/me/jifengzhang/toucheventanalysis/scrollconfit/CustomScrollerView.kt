@@ -13,9 +13,17 @@ import me.jifengzhang.toucheventanalysis.R
  */
 class CustomScrollerView(context: Context?, attrs: AttributeSet?) : ScrollView(context, attrs) {
     override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
-        val ret:Boolean =  headerIsShown()
-        Log.i("ScrollView","onInterceptTouchEvent " + ret)
-        return  ret
+        Log.i("ScrollerView","scrollY = $scrollY, height = $height ," + getChildAt(0).height)
+        if (scrollY + height - paddingTop-paddingBottom == getChildAt(0).height) {
+            Log.i("ScrollerView","onInterceptTouchEvent false" )
+            return false
+        }
+        else {
+            return true
+        }
+//        val ret:Boolean =  super.onInterceptTouchEvent(ev)
+//        Log.i("ScrollView","onInterceptTouchEvent " + ret)
+//        return  ret
     }
 
     fun headerIsShown(): Boolean {
