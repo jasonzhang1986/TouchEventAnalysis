@@ -15,8 +15,8 @@ import me.jifengzhang.toucheventanalysis.R
  * Created by jifengzhang on 18/1/27.
  */
 class CustomScrollerView(context: Context?, attrs: AttributeSet?) : ScrollView(context, attrs) {
-    var lastX:Float = 0f
-    var lastY:Float = 0f
+    private var lastX:Float = 0f
+    private var lastY:Float = 0f
     override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
         super.onInterceptTouchEvent(ev)
         Log.i("ScrollerView","scrollY = $scrollY, height = $height ," + getChildAt(0).height)
@@ -27,11 +27,11 @@ class CustomScrollerView(context: Context?, attrs: AttributeSet?) : ScrollView(c
                 lastY = ev.y
             }
             MotionEvent.ACTION_MOVE -> {
-                if (lastY - ev.y > 0){
-                    intercepted = headerIsShown()
+                intercepted = if (lastY - ev.y > 0){
+                    headerIsShown()
                 } else {
                     val list: ListView = findViewById(R.id.list)
-                    intercepted = list.firstVisiblePosition==0
+                    list.firstVisiblePosition==0
                 }
                 lastX = ev.x
                 lastY = ev.y
